@@ -1,4 +1,4 @@
-pub const FONT_SET: [u8; 80] = [
+pub const FONT_SET: [usize; 80] = [
   0xF0,
   0x90,
   0x90,

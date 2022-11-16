@@ -4,26 +4,24 @@ extern crate sdl2;
 mod components;
 mod fonts;
 
-use std::thread;
-use std::time::Duration;
 use std::env;
+use std::fs;
 
-use components::Processor;
-use components::Memory;
+use components::Cpu;
 
+const EMULATOR_NAME: &str = "Rust CHIP-8 Emulator";
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
-const SYSTEM_RAM: usize = 4092;
 
 fn main() {
-    let sleep_duration = Duration::from_millis(2);
-
-    let sdl_context = sdl2::init().unwrap();
-
     let args: Vec<String> = env::args().collect();
     let cartridge_filename = &args[1];
 
-    let mut Process::new();
+    let program_data = fs::read(cartridge_filename).unwrap_or(Vec::new());
 
-    
+    let mut cpu = Cpu::new();
+
+    cpu.load_program(program_data);
+    cpu.init_video();
+    cpu.emulate();
 }
