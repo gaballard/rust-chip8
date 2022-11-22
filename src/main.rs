@@ -12,6 +12,7 @@ use components::Cpu;
 const EMULATOR_NAME: &str = "Rust CHIP-8 Emulator";
 const SCREEN_WIDTH: usize = 64;
 const SCREEN_HEIGHT: usize = 32;
+const VIDEO_SCALE: usize = 4;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
