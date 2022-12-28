@@ -1,6 +1,3 @@
-extern crate rand;
-extern crate sdl2;
-
 use dotenv::dotenv;
 use env_logger;
 use log::debug;
@@ -10,6 +7,7 @@ use std::fs;
 mod components;
 mod constants;
 mod fonts;
+mod models;
 mod peripherals;
 
 use components::Cpu;
