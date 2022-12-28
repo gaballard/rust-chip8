@@ -1,4 +1,4 @@
-pub const EMULATOR_NAME: &str = "gEMU Chip-8 Emulator";
+pub const EMULATOR_NAME: &str = "Wow! Another CHIP-8 Emulator!";
 pub const SCREEN_WIDTH: usize = 64;
 pub const SCREEN_HEIGHT: usize = 32;
 pub const VIDEO_SCALE: usize = 4;
