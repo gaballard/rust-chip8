@@ -3,7 +3,7 @@ extern crate sdl2;
 
 use dotenv::dotenv;
 use env_logger;
-use log::{debug, info};
+use log::debug;
 use std::env;
 use std::fs;
 
@@ -45,15 +45,15 @@ fn main() {
         .timer()
         .expect("SDL2 context timer failed to initialize in main");
 
-    // CPU timing
+    // Emulator timing
     let mut prev_tick = timer.ticks();
     let mut prev_second = timer.ticks();
-    let target_timestep = (1_000 / constants::TARGET_FPS).;
+    let target_timestep = 1_000 / constants::TARGET_CLOCK_SPEED;
     let mut fps: u32 = 0;
 
-    let display = Display::new(&sdl_context);
+    let mut display = Display::new(&sdl_context);
     let mut keypad = Keypad::new(&sdl_context);
-    let mut cpu = Cpu::new(display);
+    let mut cpu = Cpu::new(&mut display);
 
     cpu.load_program(program_data);
 
@@ -65,6 +65,7 @@ fn main() {
             EmulatorState::Reset => cpu.reset(),
             EmulatorState::Running => {}
         }
+        keypad.read_keypad(&mut cpu.keys);
 
         // Emulate cycle
         cpu.emulate_cycle();
@@ -86,11 +87,11 @@ fn main() {
         prev_tick = tick;
 
         if tick - prev_second > 1_000 {
-            debug!("{} FPS", fps + 1);
+            debug!("{} FPS", fps);
             prev_second = tick;
             fps = 0;
         }
     }
 
-    info!("Exiting emulator...");
+    debug!("Exiting emulator...");
 }

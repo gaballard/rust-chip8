@@ -22,8 +22,7 @@ impl Keypad {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn read_keypad(&mut self, mut keys: InputBuffer) -> InputBuffer {
+    pub fn read_keypad(&mut self, keys: &mut InputBuffer) {
         let keypad_state = KeyboardState::new(&mut self.event_pump);
 
         keys.set(0x0, keypad_state.is_scancode_pressed(Scancode::Num1));
@@ -45,8 +44,6 @@ impl Keypad {
         keys.set(0xD, keypad_state.is_scancode_pressed(Scancode::X));
         keys.set(0xE, keypad_state.is_scancode_pressed(Scancode::C));
         keys.set(0xF, keypad_state.is_scancode_pressed(Scancode::V));
-
-        keys
     }
 
     pub fn read_host_keypad(&mut self) -> EmulatorState {

@@ -1,17 +1,17 @@
-use crate::constants::{SCREEN_HEIGHT, SCREEN_WIDTH, SYSTEM_RAM};
+use crate::constants;
 
 ///
 /// Memory
 ///
 #[derive(Debug)]
 pub struct Memory {
-    data: Box<[u8; SYSTEM_RAM as usize]>,
+    data: Box<[u8; constants::SYSTEM_RAM as usize]>,
 }
 
 impl Memory {
     pub fn new() -> Self {
         Memory {
-            data: Box::new([0; SYSTEM_RAM as usize]),
+            data: Box::new([0; constants::SYSTEM_RAM as usize]),
         }
     }
 
@@ -40,7 +40,7 @@ impl Memory {
     }
 
     pub fn clear(&mut self) {
-        self.data = Box::new([0; SYSTEM_RAM as usize]);
+        self.data = Box::new([0; constants::SYSTEM_RAM as usize]);
     }
 }
 
@@ -49,13 +49,13 @@ impl Memory {
 ///
 #[derive(Debug)]
 pub struct VideoMemory {
-    data: Box<[[u8; SCREEN_WIDTH]; SCREEN_HEIGHT]>,
+    data: Box<[[u8; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT]>,
 }
 
 impl VideoMemory {
     pub fn new() -> Self {
         VideoMemory {
-            data: Box::new([[0; SCREEN_WIDTH]; SCREEN_HEIGHT]),
+            data: Box::new([[0; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT]),
         }
     }
 
@@ -68,47 +68,7 @@ impl VideoMemory {
     }
 
     pub fn clear(&mut self) {
-        self.data = Box::new([[0; SCREEN_WIDTH]; SCREEN_HEIGHT]);
-    }
-}
-
-///
-/// Program Stack
-///
-#[derive(Debug)]
-pub struct Stack {
-    data: [u16; 16],
-    pointer: u8,
-}
-
-impl Stack {
-    pub fn new() -> Self {
-        Self {
-            data: [0; 16],
-            pointer: 0,
-        }
-    }
-
-    pub fn push(&mut self, value: u16) {
-        if self.data.len() < 16 {
-            self.data[self.pointer as usize] = value;
-            self.pointer += 1;
-        }
-    }
-
-    pub fn pop(&mut self) -> u16 {
-        if self.data.len() > 0 && self.pointer > 0 {
-            self.pointer -= 1;
-            self.data[self.pointer as usize]
-        } else {
-            self.pointer = 0;
-            self.data[0]
-        }
-    }
-
-    pub fn clear(&mut self) {
-        self.data = [0; 16];
-        self.pointer = 0;
+        self.data = Box::new([[0; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT]);
     }
 }
 
@@ -117,35 +77,29 @@ impl Stack {
 ///
 #[derive(Debug)]
 pub struct InputBuffer {
-    keys: Box<[bool; 16]>,
+    buffer: Box<[bool; 16]>,
 }
 
 impl InputBuffer {
     pub fn new() -> Self {
         Self {
-            keys: Box::new([false; 16]),
+            buffer: Box::new([false; 16]),
         }
     }
 
     pub fn get_all(&self) -> &Box<[bool; 16]> {
-        &self.keys
+        &self.buffer
     }
 
     pub fn get(&self, key: usize) -> &bool {
-        &self.keys[key]
+        &self.buffer[key]
     }
 
-    #[allow(dead_code)]
     pub fn set(&mut self, key: usize, is_pressed: bool) {
-        self.keys[key] = is_pressed;
-    }
-
-    #[allow(dead_code)]
-    pub fn toggle(&mut self, key: usize) {
-        self.keys[key] = !self.keys[key];
+        self.buffer[key] = is_pressed;
     }
 
     pub fn clear(&mut self) {
-        self.keys = Box::new([false; 16]);
+        self.buffer = Box::new([false; 16]);
     }
 }

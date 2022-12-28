@@ -64,7 +64,7 @@ impl Display {
                 }
             }
             self.canvas.present();
-            self.refresh_display = false;
+            self.set_refresh_flag(false);
         }
     }
 }
