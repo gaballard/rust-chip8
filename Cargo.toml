@@ -7,5 +7,8 @@ authors = ["Geoff Ballard <geoffreyballard@gmail.com>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+dotenv = "0.15.0"
+env_logger = "0.10.0"
+log = "0.4.17"
 rand = "0.8.5"
 sdl2 = "^0.35"
