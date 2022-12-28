@@ -5,8 +5,7 @@ use sdl2::keyboard::{KeyboardState, Keycode, Scancode};
 use sdl2::EventPump;
 use sdl2::Sdl;
 
-use crate::components::InputBuffer;
-use crate::EmulatorState;
+use crate::{models::InputBuffer, EmulatorState};
 
 pub struct Keypad {
     event_pump: EventPump,

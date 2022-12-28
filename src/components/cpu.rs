@@ -1,47 +1,14 @@
+use beep::beep;
 use log::debug;
-use rand::*;
+use rand::{rngs::ThreadRng, Rng};
 
 use crate::{
-    components::{InputBuffer, Memory, VideoMemory},
+    components::{Memory, VideoMemory},
     constants,
     fonts::CHIP8_FONTS,
+    models::{InputBuffer, Registers, Stack, Timer},
     peripherals::Display,
 };
-
-///
-/// Program Stack
-///
-#[derive(Debug)]
-pub struct Stack {
-    data: Box<[u16; 16]>,
-    pointer: u8,
-}
-
-impl Stack {
-    pub fn new() -> Self {
-        Self {
-            data: Box::new([0; 16]),
-            pointer: 0,
-        }
-    }
-
-    pub fn push(&mut self, value: u16) {
-        self.pointer += 1;
-        self.data[self.pointer as usize] = value;
-    }
-
-    pub fn pop(&mut self) -> u16 {
-        let addr = self.data[self.pointer as usize];
-        self.pointer -= 1;
-
-        addr
-    }
-
-    pub fn clear(&mut self) {
-        self.data = Box::new([0; 16]);
-        self.pointer = 0;
-    }
-}
 
 ///
 /// Program Counter
@@ -72,34 +39,6 @@ impl ProgramCounter {
 }
 
 ///
-/// Registers
-///
-#[derive(Debug)]
-pub struct Registers {
-    data: Box<[u8; 16]>,
-}
-
-impl Registers {
-    pub fn new() -> Self {
-        Registers {
-            data: Box::new([0; 16]),
-        }
-    }
-
-    pub fn read(&self, register: u8) -> &u8 {
-        &self.data[register as usize]
-    }
-
-    pub fn write(&mut self, register: u8, value: u8) {
-        self.data[register as usize] = value;
-    }
-
-    pub fn clear(&mut self) {
-        self.data = Box::new([0; 16]);
-    }
-}
-
-///
 /// CPU
 ///
 pub struct Cpu<'a> {
@@ -110,11 +49,9 @@ pub struct Cpu<'a> {
     i: u16,
     pc: ProgramCounter,
     stack: Stack,
-    delay_timer: u8,
-    delay_tick: f32,
-    sound_timer: u8,
-    sound_tick: f32,
-    rng: rand::rngs::ThreadRng,
+    delay_timer: Timer,
+    sound_timer: Timer,
+    rng: ThreadRng,
     pub keys: InputBuffer,
     display: &'a mut Display,
 }
@@ -130,10 +67,8 @@ impl<'a> Cpu<'a> {
             pc: ProgramCounter::new(),
             stack: Stack::new(),
             rng: rand::thread_rng(),
-            delay_timer: 0,
-            delay_tick: 0.0,
-            sound_timer: 0,
-            sound_tick: 0.0,
+            delay_timer: Timer::new(0, 0.0, constants::TARGET_CLOCK_SPEED),
+            sound_timer: Timer::new(0, 0.0, constants::TARGET_CLOCK_SPEED),
             keys: InputBuffer::new(),
             display,
         };
@@ -156,10 +91,8 @@ impl<'a> Cpu<'a> {
         self.pc.clear();
         self.stack.clear();
         self.rng = rand::thread_rng();
-        self.delay_timer = 0;
-        self.delay_tick = 0.0;
-        self.sound_timer = 0;
-        self.sound_tick = 0.0;
+        self.delay_timer.clear();
+        self.sound_timer.clear();
         self.keys.clear();
     }
 
@@ -174,45 +107,30 @@ impl<'a> Cpu<'a> {
     pub fn emulate_cycle(&mut self) {
         // CHIP-8 processes two instructions per clock cycle
         for _ in 0..1 {
+            self.read_instruction();
             self.execute_instruction();
         }
         self.display.refresh(&self.vram);
     }
 
     pub fn update_timers(&mut self, delta_time: f32) {
-        self.update_delay_timer(delta_time);
-        self.update_sound_timer(delta_time);
-    }
+        self.delay_timer.update(&delta_time);
+        self.sound_timer.update(&delta_time);
 
-    fn update_delay_timer(&mut self, delta_time: f32) {
-        if self.delay_timer > 0 {
-            self.delay_tick -= delta_time;
-
-            if self.delay_tick <= 0.0 {
-                self.delay_timer = self.delay_timer.checked_sub(1).unwrap_or(0);
-                self.delay_tick = 1.0 / constants::TARGET_CLOCK_SPEED as f32;
-            }
+        if self.sound_timer.get_value() > &0 {
+            let _ = beep(constants::BEEP_FREQ_HZ);
+        } else {
+            let _ = beep(0);
         }
     }
 
-    fn update_sound_timer(&mut self, delta_time: f32) {
-        if self.sound_timer > 0 {
-            self.sound_tick -= delta_time;
-
-            if self.sound_tick <= 0.0 {
-                self.sound_timer = self.sound_timer.checked_sub(1).unwrap_or(0);
-                self.sound_tick = 1.0 / constants::TARGET_CLOCK_SPEED as f32;
-            }
-        }
-    }
-
-    fn read_instruction(&self) -> u16 {
-        (*self.ram.read(self.pc.address) as u16) << 8 | (*self.ram.read(self.pc.address + 1) as u16)
+    fn read_instruction(&mut self) {
+        self.instruction = (*self.ram.read(self.pc.address) as u16) << 8
+            | (*self.ram.read(self.pc.address + 1) as u16);
     }
 
     fn execute_instruction(&mut self) {
-        self.instruction = self.read_instruction();
-
+        // Increment this now instead of in each `match` branch
         self.pc.next();
 
         let x = ((self.instruction & 0x0F00) >> 8).try_into().unwrap();
@@ -453,7 +371,7 @@ impl<'a> Cpu<'a> {
                 0x07 => {
                     debug!("Fx07 - LD V{}, DT", x);
                     // The value of DT is placed into Vx.
-                    self.v.write(x, self.delay_timer);
+                    self.v.write(x, *self.delay_timer.get_value());
                 }
                 0x0A => {
                     debug!("Fx0A - LD V{}, K", x);
@@ -470,12 +388,12 @@ impl<'a> Cpu<'a> {
                 0x15 => {
                     debug!("Fx15 - LD DT V{}", x);
                     // DT is set equal to the value of Vx.
-                    self.delay_timer = *self.v.read(x);
+                    self.delay_timer.set_value(*self.v.read(x));
                 }
                 0x18 => {
                     debug!("Fx18 - LD ST V{}", x);
                     // ST is set equal to the value of Vx.
-                    self.sound_timer = *self.v.read(x);
+                    self.sound_timer.set_value(*self.v.read(x));
                 }
                 0x1E => {
                     debug!("Fx1E - ADD I V{}", x);
