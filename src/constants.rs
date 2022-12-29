@@ -1,3 +1,5 @@
+use sdl2::pixels::Color;
+
 // Emulator
 pub const EMULATOR_NAME: &str = "Wow! Another CHIP-8 Emulator!";
 pub const MAX_ROM_SIZE: usize = 3585;
@@ -5,7 +7,9 @@ pub const MAX_ROM_SIZE: usize = 3585;
 // Display
 pub const SCREEN_WIDTH: usize = 64;
 pub const SCREEN_HEIGHT: usize = 32;
-pub const VIDEO_SCALE: usize = 4;
+pub const VIDEO_SCALE: usize = 12;
+pub const FOREGROUND_COLOR: Color = Color::GREEN;
+pub const BACKGROUND_COLOR: Color = Color::BLACK;
 
 // Sound
 pub const BEEP_FREQ_HZ: u16 = 440;

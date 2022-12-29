@@ -1,14 +1,7 @@
 use crate::components::VideoMemory;
-use crate::constants::{EMULATOR_NAME, SCREEN_HEIGHT, SCREEN_WIDTH, VIDEO_SCALE};
+use crate::constants;
 
-use sdl2::pixels::Color;
-use sdl2::rect::Rect;
-use sdl2::render::Canvas;
-use sdl2::video::Window;
-use sdl2::Sdl;
-
-const FG_COLOR: Color = Color::RGB(255, 255, 255);
-const BG_COLOR: Color = Color::RGB(0, 0, 0);
+use sdl2::{rect::Rect, render::Canvas, video::Window, Sdl};
 
 pub struct Display {
     canvas: Canvas<Window>,
@@ -22,9 +15,9 @@ impl Display {
             .expect("SDL2 video subsystem failed to initialize in Gpu::new");
         let window = video_subsystem
             .window(
-                &EMULATOR_NAME,
-                (SCREEN_WIDTH * VIDEO_SCALE) as u32,
-                (SCREEN_HEIGHT * VIDEO_SCALE) as u32,
+                &constants::EMULATOR_NAME,
+                (constants::SCREEN_WIDTH * constants::VIDEO_SCALE) as u32,
+                (constants::SCREEN_HEIGHT * constants::VIDEO_SCALE) as u32,
             )
             .position_centered()
             .build()
@@ -46,19 +39,19 @@ impl Display {
 
     pub fn refresh(&mut self, vram: &VideoMemory) {
         if self.refresh_display {
-            for y in 0..SCREEN_HEIGHT {
-                for x in 0..SCREEN_WIDTH {
+            for y in 0..constants::SCREEN_HEIGHT {
+                for x in 0..constants::SCREEN_WIDTH {
                     if *vram.read(x, y) == 1 {
-                        self.canvas.set_draw_color(FG_COLOR);
+                        self.canvas.set_draw_color(constants::FOREGROUND_COLOR);
                     } else {
-                        self.canvas.set_draw_color(BG_COLOR);
+                        self.canvas.set_draw_color(constants::BACKGROUND_COLOR);
                     }
                     self.canvas
                         .fill_rect(Rect::new(
-                            (x * VIDEO_SCALE) as i32,
-                            (y * VIDEO_SCALE) as i32,
-                            VIDEO_SCALE as u32,
-                            VIDEO_SCALE as u32,
+                            (x * constants::VIDEO_SCALE) as i32,
+                            (y * constants::VIDEO_SCALE) as i32,
+                            constants::VIDEO_SCALE as u32,
+                            constants::VIDEO_SCALE as u32,
                         ))
                         .unwrap();
                 }
