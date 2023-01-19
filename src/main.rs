@@ -1,6 +1,7 @@
 use dotenv::dotenv;
 use env_logger;
-use log::debug;
+use eyre::Result;
+use log::{debug, info};
 use std::env;
 use std::fs;
 
@@ -9,6 +10,7 @@ mod constants;
 mod fonts;
 mod models;
 mod peripherals;
+mod utils;
 
 use components::Cpu;
 use peripherals::{Display, Keypad};
@@ -19,7 +21,8 @@ pub enum EmulatorState {
     Running,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<()> {
     env_logger::try_init().expect("Couldn't load env_logger");
     dotenv().expect("Couldn't load settings from `.env` file");
 
@@ -68,6 +71,11 @@ fn main() {
         // Emulate cycle
         cpu.emulate_cycle();
 
+        // Refresh screen
+        debug!("Refreshing screen...");
+        cpu.display.refresh(&cpu.vram).await?;
+        debug!("Refresh done! Refreshing screen...");
+
         // Get delta time
         let tick = timer.ticks();
         let dt = tick - prev_tick;
@@ -92,4 +100,6 @@ fn main() {
     }
 
     debug!("Exiting emulator...");
+
+    Ok(())
 }

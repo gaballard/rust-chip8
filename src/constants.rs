@@ -22,3 +22,7 @@ pub const OPCODE_SIZE: u16 = 2;
 // Memory
 pub const FONT_START_ADDR: u16 = 0x50;
 pub const PROGRAM_START_ADDR: u16 = 0x200;
+
+// Videp
+pub const MAX_SPRITE_WIDTH: usize = 8;
+pub const MAX_SPRITE_HEIGHT: usize = 15;

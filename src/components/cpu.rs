@@ -8,6 +8,7 @@ use crate::{
     fonts::CHIP8_FONTS,
     models::{InputBuffer, Registers, Stack, Timer},
     peripherals::Display,
+    utils::read_bit_from_byte,
 };
 
 ///
@@ -44,7 +45,7 @@ impl ProgramCounter {
 pub struct Cpu<'a> {
     instruction: u16,
     ram: Memory,
-    vram: VideoMemory,
+    pub vram: VideoMemory<'a>,
     v: Registers,
     i: u16,
     pc: ProgramCounter,
@@ -53,12 +54,12 @@ pub struct Cpu<'a> {
     sound_timer: Timer,
     rng: ThreadRng,
     pub keys: InputBuffer,
-    display: &'a mut Display,
+    pub display: &'a mut Display,
 }
 
 impl<'a> Cpu<'a> {
-    pub fn new(display: &'a mut Display) -> Cpu<'a> {
-        let mut cpu = Cpu {
+    pub fn new(display: &'a mut Display) -> Self {
+        let mut cpu = Self {
             instruction: 0,
             ram: Memory::new(),
             vram: VideoMemory::new(),
@@ -110,7 +111,7 @@ impl<'a> Cpu<'a> {
             self.read_instruction();
             self.execute_instruction();
         }
-        self.display.refresh(&self.vram);
+        // self.display.refresh(&self.vram);
     }
 
     pub fn update_timers(&mut self, delta_time: f32) {
@@ -311,41 +312,41 @@ impl<'a> Cpu<'a> {
                 let mut sy: usize = 0;
                 let mut sx: usize = 0;
                 let mut collision = false;
+
                 self.v.write(0xF, 0);
+                self.vram.buffer.clear();
 
                 while sy < len.try_into().unwrap() {
                     while sx < 8 {
-                        let bit = self
-                            .ram
-                            .read_bit_from_byte(&sprite[sy as usize], 7 - sx as u8);
+                        let bit = read_bit_from_byte(&sprite[sy as usize], 7 - sx as u8);
 
-                        let mut bx = vx + sx;
-                        if bx as usize > constants::SCREEN_WIDTH - 1 {
-                            bx = bx % constants::SCREEN_WIDTH;
+                        let mut x = vx + sx;
+                        if x > constants::SCREEN_WIDTH - 1 {
+                            x = x % constants::SCREEN_WIDTH;
                         }
 
-                        let mut by = vy + sy;
-                        if by as usize > constants::SCREEN_HEIGHT - 1 {
-                            by = by % constants::SCREEN_HEIGHT;
+                        let mut y = vy + sy;
+                        if y > constants::SCREEN_HEIGHT - 1 {
+                            y = y % constants::SCREEN_HEIGHT;
                         }
 
-                        let xor_res = self.vram.read(bx, by) ^ bit;
-                        if xor_res == 1 && !collision {
+                        let xor_res = self.vram.read(x, y) ^ bit;
+                        if !collision && xor_res == 1 {
                             collision = true;
+                            self.v.write(0xF, 1);
                         }
 
-                        self.vram.write(bx, by, xor_res);
+                        self.vram.buffer.write(x, y, xor_res);
+                        self.vram.write(x, y, xor_res);
                         sx += 1;
                     }
                     sx = 0;
                     sy += 1;
                 }
 
-                if collision {
-                    self.v.write(0xF, 1);
+                if self.vram.buffer.len() > 0 {
+                    self.display.set_refresh_flag(true);
                 }
-
-                self.display.set_refresh_flag(true);
             }
             0xE000 => match self.instruction & 0x00FF {
                 0x9E => {
