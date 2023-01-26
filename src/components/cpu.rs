@@ -111,7 +111,6 @@ impl<'a> Cpu<'a> {
             self.read_instruction();
             self.execute_instruction();
         }
-        // self.display.refresh(&self.vram);
     }
 
     pub fn update_timers(&mut self, delta_time: f32) {
@@ -307,7 +306,10 @@ impl<'a> Cpu<'a> {
                 let len = self.instruction & 0x000F;
                 let sprite = self.ram.read_slice(self.i, len);
 
-                debug!("Draw the following Sprite at {},{}: {:?}", vx, vy, sprite);
+                debug!(
+                    "Draw the following Sprite with length {} at ({},{}): {:?}",
+                    len, vx, vy, sprite
+                );
 
                 let mut sy: usize = 0;
                 let mut sx: usize = 0;
@@ -338,6 +340,7 @@ impl<'a> Cpu<'a> {
 
                         self.vram.buffer.write(x, y, xor_res);
                         self.vram.write(x, y, xor_res);
+
                         sx += 1;
                     }
                     sx = 0;

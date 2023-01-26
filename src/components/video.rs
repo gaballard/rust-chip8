@@ -9,15 +9,15 @@ use crate::{constants, models::Sprite};
 ///
 #[derive(Debug)]
 pub struct VideoBuffer {
-    pub data: Box<HashMap<(usize, usize), u8>>,
-    pub rects: Box<Vec<Rect>>,
+    pub data: HashMap<(usize, usize), u8>,
+    pub rects: Vec<Rect>,
 }
 
 impl VideoBuffer {
     pub fn new() -> Self {
         Self {
-            data: Box::new(HashMap::new()),
-            rects: Box::new(Vec::new()),
+            data: HashMap::new(),
+            rects: Vec::new(),
         }
     }
 

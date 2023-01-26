@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use env_logger;
 use eyre::Result;
-use log::{debug, info};
+use log::debug;
 use std::env;
 use std::fs;
 
@@ -71,17 +71,13 @@ async fn main() -> Result<()> {
         // Emulate cycle
         cpu.emulate_cycle();
 
-        // Refresh screen
-        debug!("Refreshing screen...");
-        cpu.display.refresh(&cpu.vram).await?;
-        debug!("Refresh done! Refreshing screen...");
-
         // Get delta time
         let tick = timer.ticks();
         let dt = tick - prev_tick;
 
         // Delay execution to match target FPS
         if dt < target_timestep as u32 {
+            cpu.display.refresh(&cpu.vram)?;
             timer.delay(target_timestep as u32 - dt);
             continue;
         }
@@ -93,7 +89,7 @@ async fn main() -> Result<()> {
         prev_tick = tick;
 
         if tick - prev_second > 1_000 {
-            debug!("{} FPS", fps);
+            debug!("{} FPS", fps + 1);
             prev_second = tick;
             fps = 0;
         }

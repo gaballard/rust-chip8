@@ -23,6 +23,7 @@ impl Memory {
         &self.data[addr as usize..(addr + len) as usize]
     }
 
+    #[allow(dead_code)]
     pub fn read_bit_from_byte(&self, byte: &u8, bit_position: u8) -> &u8 {
         if bit_position < 8 {
             if byte & (1 << bit_position) != 0 {

@@ -15,9 +15,10 @@ pub struct Sprite<'a> {
     pub prev_position: [usize; 2],
 }
 
+#[allow(dead_code)]
 impl<'a> Sprite<'a> {
     pub fn new(data: &'a [u8], position: [usize; 2]) -> Self {
-        let mut points = [Point::new(0, 0); MAX_SPRITE_LENGTH];
+        let points = [Point::new(0, 0); MAX_SPRITE_LENGTH];
 
         let x = position[0];
         let y = position[1];

@@ -1,14 +1,12 @@
+use crate::components::VideoMemory;
 use crate::constants;
-use crate::utils::read_bit_from_byte;
-use crate::{components::VideoMemory, models::Sprite};
 
 use eyre::Result;
-use sdl2::rect::Point;
-// use log::debug;
+use log::debug;
 use sdl2::{rect::Rect, render::Canvas, video::Window, Sdl};
 
 pub struct Display {
-    canvas: Canvas<Window>,
+    pub canvas: Canvas<Window>,
     refresh_display: bool,
 }
 
@@ -41,51 +39,59 @@ impl Display {
         self.refresh_display = val;
     }
 
-    pub fn draw_sprite<'a>(&mut self, vram: &VideoMemory, sprite: &Sprite<'a>) {
-        // Get VRAM
-        // Get sprite data
-        // Do an XOR like usual
-        // For all pixels that are removed...
-        //  Get the corresponding Points from the points array
-        //  Set color to BG and draw Points
-        // For all pixels that were added...
-        //  Get the corresponding Points from the points array
-        //  Set color to FG and draw Points
+    // pub fn draw_sprite<'a>(&mut self, vram: &VideoMemory, sprite: &Sprite<'a>) {
+    //     // Get VRAM
+    //     // Get sprite data
+    //     // Do an XOR like usual
+    //     // For all pixels that are removed...
+    //     //  Get the corresponding Points from the points array
+    //     //  Set color to BG and draw Points
+    //     // For all pixels that were added...
+    //     //  Get the corresponding Points from the points array
+    //     //  Set color to FG and draw Points
 
-        self.canvas.set_draw_color(constants::BACKGROUND_COLOR);
-        let points: [Point; constants::MAX_SPRITE_HEIGHT * constants::MAX_SPRITE_WIDTH] =
-            sprite.points.get(sprite.prev_position);
-        let _ = self.canvas.draw_points(points.as_slice());
+    //     self.canvas.set_draw_color(constants::BACKGROUND_COLOR);
+    //     let points: [Point; constants::MAX_SPRITE_HEIGHT * constants::MAX_SPRITE_WIDTH] =
+    //         sprite.points.get(sprite.prev_position);
+    //     let _ = self.canvas.draw_points(points.as_slice());
 
-        self.canvas.set_draw_color(constants::FOREGROUND_COLOR);
-        let points: [Point; constants::MAX_SPRITE_HEIGHT * constants::MAX_SPRITE_WIDTH] =
-            sprite.points(*sprite.position);
-        let _ = self.canvas.draw_points(points.as_slice());
+    //     self.canvas.set_draw_color(constants::FOREGROUND_COLOR);
+    //     let points: [Point; constants::MAX_SPRITE_HEIGHT * constants::MAX_SPRITE_WIDTH] =
+    //         sprite.points(*sprite.position);
+    //     let _ = self.canvas.draw_points(points.as_slice());
 
-        self.canvas.present();
-    }
+    //     self.canvas.present();
+    // }
 
-    pub async fn refresh<'a>(&mut self, vram: &VideoMemory<'a>) -> Result<()> {
-        for y in 0..constants::SCREEN_HEIGHT {
-            for x in 0..constants::SCREEN_WIDTH {
-                if *vram.read(x, y) == 1 {
-                    self.canvas.set_draw_color(constants::FOREGROUND_COLOR);
-                } else {
-                    self.canvas.set_draw_color(constants::BACKGROUND_COLOR);
+    pub fn refresh<'a>(&mut self, vram: &VideoMemory<'a>) -> Result<()> {
+        if self.refresh_display {
+            debug!("Refreshing screen...");
+
+            self.refresh_display = false;
+
+            for y in 0..constants::SCREEN_HEIGHT {
+                for x in 0..constants::SCREEN_WIDTH {
+                    if *vram.read(x, y) == 1 {
+                        self.canvas.set_draw_color(constants::FOREGROUND_COLOR);
+                    } else {
+                        self.canvas.set_draw_color(constants::BACKGROUND_COLOR);
+                    }
+                    self.canvas
+                        .fill_rect(Rect::new(
+                            (x * constants::VIDEO_SCALE) as i32,
+                            (y * constants::VIDEO_SCALE) as i32,
+                            constants::VIDEO_SCALE as u32,
+                            constants::VIDEO_SCALE as u32,
+                        ))
+                        .unwrap();
                 }
-                self.canvas
-                    .fill_rect(Rect::new(
-                        (x * constants::VIDEO_SCALE) as i32,
-                        (y * constants::VIDEO_SCALE) as i32,
-                        constants::VIDEO_SCALE as u32,
-                        constants::VIDEO_SCALE as u32,
-                    ))
-                    .unwrap();
             }
-        }
 
-        // Draw to screen
-        self.canvas.present();
+            // Draw to screen
+            self.canvas.present();
+
+            debug!("Refresh done!");
+        }
 
         Ok(())
     }
