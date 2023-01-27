@@ -1,13 +1,12 @@
 use beep::beep;
-use log::{debug, info};
+use log::debug;
 use rand::{rngs::ThreadRng, Rng};
-use sdl2::rect::Rect;
 
 use crate::{
     components::{Memory, VideoMemory},
     constants,
     fonts::CHIP8_FONTS,
-    models::{InputBuffer, Registers, Sprite, Stack, Timer},
+    models::{InputBuffer, Registers, Stack, Timer},
     peripherals::Display,
     utils::read_bit_from_byte,
 };
@@ -46,7 +45,7 @@ impl ProgramCounter {
 pub struct Cpu<'a> {
     instruction: u16,
     ram: Memory,
-    pub vram: VideoMemory<'a>,
+    pub vram: VideoMemory,
     v: Registers,
     i: u16,
     pc: ProgramCounter,
@@ -56,6 +55,7 @@ pub struct Cpu<'a> {
     rng: ThreadRng,
     pub keys: InputBuffer,
     pub display: &'a mut Display,
+    pause: bool,
 }
 
 impl<'a> Cpu<'a> {
@@ -73,6 +73,7 @@ impl<'a> Cpu<'a> {
             sound_timer: Timer::new(0, 0.0, constants::TARGET_CLOCK_SPEED),
             keys: InputBuffer::new(),
             display,
+            pause: false,
         };
 
         let mut i = constants::FONT_START_ADDR;
@@ -107,6 +108,10 @@ impl<'a> Cpu<'a> {
     }
 
     pub fn emulate_cycle(&mut self) {
+        if self.wait_for_input() {
+            return;
+        }
+
         // CHIP-8 processes two instructions per clock cycle
         for _ in 0..1 {
             self.read_instruction();
@@ -123,6 +128,17 @@ impl<'a> Cpu<'a> {
         } else {
             let _ = beep(0);
         }
+    }
+
+    fn wait_for_input(&mut self) -> bool {
+        if self.pause {
+            for key in 0..15 as usize {
+                if *self.keys.get(key) {
+                    self.pause = false;
+                }
+            }
+        }
+        self.pause
     }
 
     fn read_instruction(&mut self) {
@@ -147,7 +163,7 @@ impl<'a> Cpu<'a> {
                     debug!("00E0 - CLS");
                     // Clear the display.
                     self.vram.clear();
-                    self.display.set_refresh_flag(true);
+                    self.display.refresh(&self.vram);
                 }
                 0xEE => {
                     debug!("00EE - RET");
@@ -312,37 +328,12 @@ impl<'a> Cpu<'a> {
                     len, vx, vy, sprite_data
                 );
 
-                let sprite_id = self.i + len;
-                let sprite = self.vram.get_sprite(sprite_id);
-
-                info!("Got sprite from memory: {:?}", sprite);
-
-                // let new_sprite = Sprite::new(sprite_id, sprite_data, [vx, vy]);
-
-                // If prev position = None, go ahead and draw it
-                // If prev position = Some, 
-                // draw the sprite in BG color
-
-                // let sprite = if sprite.is_none() {
-                //     &new_sprite
-                // } else {
-                //     let sprite = *sprite.unwrap();
-                //     if sprite.position == [vx, vy] {
-                //         return;
-                //     }
-                //     &sprite
-                // };
-
-                info!("Got final sprite: {:?}", sprite);
-
-                self.vram.sprites.insert(sprite_id, *sprite);
-
                 let mut sy: usize = 0;
                 let mut sx: usize = 0;
                 let mut collision = false;
+                let mut did_draw = false;
 
                 self.v.write(0xF, 0);
-                self.vram.buffer.clear();
 
                 while sy < len.try_into().unwrap() {
                     while sx < 8 {
@@ -364,18 +355,11 @@ impl<'a> Cpu<'a> {
                             self.v.write(0xF, 1);
                         }
 
-                        self.vram.buffer.write(x, y, xor_res);
-                        self.vram.write(x, y, xor_res);
+                        if !did_draw {
+                            did_draw = true;
+                        }
 
-                        // if xor_res == 1 {
-                        //     self.display
-                        //         .canvas
-                        //         .set_draw_color(constants::FOREGROUND_COLOR);
-                        // } else {
-                        //     self.display
-                        //         .canvas
-                        //         .set_draw_color(constants::BACKGROUND_COLOR);
-                        // }
+                        self.vram.write(x, y, xor_res);
 
                         sx += 1;
                     }
@@ -383,9 +367,8 @@ impl<'a> Cpu<'a> {
                     sy += 1;
                 }
 
-                if self.vram.buffer.len() > 0 {
-                    // self.display.canvas.present();
-                    self.display.set_refresh_flag(true);
+                if did_draw {
+                    self.display.refresh(&self.vram);
                 }
             }
             0xE000 => match self.instruction & 0x00FF {
@@ -417,13 +400,8 @@ impl<'a> Cpu<'a> {
                 0x0A => {
                     debug!("Fx0A - LD V{}, K", x);
                     // All execution stops until a key is pressed, then the value of that key is stored in Vx.
-                    'wait: loop {
-                        for key in 0..15 as usize {
-                            if *self.keys.get(key) {
-                                self.v.write(x, key as u8);
-                                break 'wait;
-                            }
-                        }
+                    if !self.pause {
+                        self.pause = true;
                     }
                 }
                 0x15 => {

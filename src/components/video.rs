@@ -1,70 +1,17 @@
-use std::collections::HashMap;
-
-use sdl2::rect::Rect;
-
-use crate::{constants, models::Sprite};
-
-///
-/// Video Buffer
-///
-#[derive(Debug)]
-pub struct VideoBuffer {
-    pub data: HashMap<(usize, usize), u8>,
-    pub rects: Vec<Rect>,
-}
-
-impl VideoBuffer {
-    pub fn new() -> Self {
-        Self {
-            data: HashMap::new(),
-            rects: Vec::new(),
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.data.len()
-    }
-
-    // pub fn data(&self) -> &Box<HashMap<(usize, usize), u8>> {
-    //     &self.data
-    // }
-
-    #[allow(dead_code)]
-    pub fn read(&self, x: usize, y: usize) -> Option<&u8> {
-        self.data.get(&(x, y))
-    }
-
-    pub fn write(&mut self, x: usize, y: usize, value: u8) {
-        self.data.insert((x, y), value);
-        self.rects.push(Rect::new(
-            (x * constants::VIDEO_SCALE) as i32,
-            (y * constants::VIDEO_SCALE) as i32,
-            constants::VIDEO_SCALE as u32,
-            constants::VIDEO_SCALE as u32,
-        ));
-    }
-
-    pub fn clear(&mut self) {
-        self.data.clear();
-    }
-}
+use crate::constants;
 
 ///
 /// Video Memory
 ///
 #[derive(Debug)]
-pub struct VideoMemory<'a> {
+pub struct VideoMemory {
     data: Box<[[u8; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT]>,
-    pub buffer: VideoBuffer,
-    pub sprites: HashMap<u16, Sprite<'a>>,
 }
 
-impl<'a> VideoMemory<'a> {
+impl VideoMemory {
     pub fn new() -> Self {
         Self {
             data: Box::new([[0; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT]),
-            buffer: VideoBuffer::new(),
-            sprites: HashMap::new(),
         }
     }
 
@@ -78,9 +25,5 @@ impl<'a> VideoMemory<'a> {
 
     pub fn clear(&mut self) {
         self.data = Box::new([[0; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT]);
-    }
-
-    pub fn get_sprite(&self, sprite_id: u16) -> Option<&Sprite<'a>> {
-        self.sprites.get(&sprite_id)
     }
 }

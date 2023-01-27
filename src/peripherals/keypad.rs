@@ -14,7 +14,6 @@ pub struct Keypad {
 impl Keypad {
     pub fn new(sdl_context: &Sdl) -> Self {
         Keypad {
-            // keys: [false; 16],
             event_pump: sdl_context
                 .event_pump()
                 .expect("SDL2 failed to create event pump in Keypad::new"),
@@ -48,11 +47,14 @@ impl Keypad {
     pub fn read_host_keypad(&mut self) -> EmulatorState {
         for event in self.event_pump.poll_iter() {
             match event {
+                // Quit
                 Event::Quit { .. }
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
                 } => return EmulatorState::Quit,
+
+                // Reset
                 Event::KeyDown {
                     keycode: Some(Keycode::Backspace),
                     ..
@@ -61,6 +63,21 @@ impl Keypad {
                     keycode: Some(Keycode::Delete),
                     ..
                 } => return EmulatorState::Reset,
+
+                // Toggle debug mode
+                Event::KeyDown {
+                    keycode: Some(Keycode::T),
+                    ..
+                } => return EmulatorState::DebugMode,
+
+                // Step through next instruction (debug mode only)
+                Event::KeyDown {
+                    keycode: Some(Keycode::Period),
+                    repeat: false,
+                    ..
+                } => return EmulatorState::Step,
+
+                // Continue
                 _ => return EmulatorState::Running,
             }
         }

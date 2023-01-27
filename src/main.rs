@@ -1,6 +1,5 @@
 use dotenv::dotenv;
 use env_logger;
-use eyre::Result;
 use log::debug;
 use std::env;
 use std::fs;
@@ -15,14 +14,18 @@ mod utils;
 use components::Cpu;
 use peripherals::{Display, Keypad};
 
+///
+/// Emulator State
+///
 pub enum EmulatorState {
     Quit,
     Reset,
     Running,
+    DebugMode,
+    Step,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() {
     env_logger::try_init().expect("Couldn't load env_logger");
     dotenv().expect("Couldn't load settings from `.env` file");
 
@@ -51,6 +54,7 @@ async fn main() -> Result<()> {
     let mut prev_second = timer.ticks();
     let target_timestep = 1_000 / constants::TARGET_CLOCK_SPEED;
     let mut fps: u32 = 0;
+    let mut frame_count: u32 = 0;
 
     let mut display = Display::new(&sdl_context);
     let mut keypad = Keypad::new(&sdl_context);
@@ -58,15 +62,25 @@ async fn main() -> Result<()> {
 
     cpu.load_program(program_data);
 
+    let mut debug_mode = false;
+
     // Main loop
     'emulate: loop {
+        let mut should_execute = false;
+
         // Check inputs
         match keypad.read_host_keypad() {
             EmulatorState::Quit => break 'emulate,
             EmulatorState::Reset => cpu.reset(),
             EmulatorState::Running => {}
+            EmulatorState::DebugMode => debug_mode = !debug_mode,
+            EmulatorState::Step => should_execute = true,
         }
         keypad.read_keypad(&mut cpu.keys);
+
+        if debug_mode && !should_execute {
+            continue;
+        }
 
         // Emulate cycle
         cpu.emulate_cycle();
@@ -77,14 +91,16 @@ async fn main() -> Result<()> {
 
         // Delay execution to match target FPS
         if dt < target_timestep as u32 {
-            cpu.display.refresh(&cpu.vram)?;
             timer.delay(target_timestep as u32 - dt);
             continue;
         }
 
+        debug!("Executing frame {}...", frame_count);
+
         cpu.update_timers(dt as f32);
 
         fps += 1;
+        frame_count = frame_count.wrapping_add(1);
 
         prev_tick = tick;
 
@@ -96,6 +112,4 @@ async fn main() -> Result<()> {
     }
 
     debug!("Exiting emulator...");
-
-    Ok(())
 }
