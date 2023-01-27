@@ -56,7 +56,7 @@ impl VideoBuffer {
 pub struct VideoMemory<'a> {
     data: Box<[[u8; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT]>,
     pub buffer: VideoBuffer,
-    pub sprites: Vec<Sprite<'a>>,
+    pub sprites: HashMap<u16, Sprite<'a>>,
 }
 
 impl<'a> VideoMemory<'a> {
@@ -64,7 +64,7 @@ impl<'a> VideoMemory<'a> {
         Self {
             data: Box::new([[0; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT]),
             buffer: VideoBuffer::new(),
-            sprites: Vec::new(),
+            sprites: HashMap::new(),
         }
     }
 
@@ -78,5 +78,9 @@ impl<'a> VideoMemory<'a> {
 
     pub fn clear(&mut self) {
         self.data = Box::new([[0; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT]);
+    }
+
+    pub fn get_sprite(&self, sprite_id: u16) -> Option<&Sprite<'a>> {
+        self.sprites.get(&sprite_id)
     }
 }

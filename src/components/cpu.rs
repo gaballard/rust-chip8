@@ -1,12 +1,13 @@
 use beep::beep;
-use log::debug;
+use log::{debug, info};
 use rand::{rngs::ThreadRng, Rng};
+use sdl2::rect::Rect;
 
 use crate::{
     components::{Memory, VideoMemory},
     constants,
     fonts::CHIP8_FONTS,
-    models::{InputBuffer, Registers, Stack, Timer},
+    models::{InputBuffer, Registers, Sprite, Stack, Timer},
     peripherals::Display,
     utils::read_bit_from_byte,
 };
@@ -304,12 +305,37 @@ impl<'a> Cpu<'a> {
                 let vx = *self.v.read(x) as usize;
                 let vy = *self.v.read(y) as usize;
                 let len = self.instruction & 0x000F;
-                let sprite = self.ram.read_slice(self.i, len);
+                let sprite_data = self.ram.read_slice(self.i, len);
 
                 debug!(
                     "Draw the following Sprite with length {} at ({},{}): {:?}",
-                    len, vx, vy, sprite
+                    len, vx, vy, sprite_data
                 );
+
+                let sprite_id = self.i + len;
+                let sprite = self.vram.get_sprite(sprite_id);
+
+                info!("Got sprite from memory: {:?}", sprite);
+
+                // let new_sprite = Sprite::new(sprite_id, sprite_data, [vx, vy]);
+
+                // If prev position = None, go ahead and draw it
+                // If prev position = Some, 
+                // draw the sprite in BG color
+
+                // let sprite = if sprite.is_none() {
+                //     &new_sprite
+                // } else {
+                //     let sprite = *sprite.unwrap();
+                //     if sprite.position == [vx, vy] {
+                //         return;
+                //     }
+                //     &sprite
+                // };
+
+                info!("Got final sprite: {:?}", sprite);
+
+                self.vram.sprites.insert(sprite_id, *sprite);
 
                 let mut sy: usize = 0;
                 let mut sx: usize = 0;
@@ -320,7 +346,7 @@ impl<'a> Cpu<'a> {
 
                 while sy < len.try_into().unwrap() {
                     while sx < 8 {
-                        let bit = read_bit_from_byte(&sprite[sy as usize], 7 - sx as u8);
+                        let bit = read_bit_from_byte(&sprite_data[sy as usize], 7 - sx as u8);
 
                         let mut x = vx + sx;
                         if x > constants::SCREEN_WIDTH - 1 {
@@ -341,6 +367,16 @@ impl<'a> Cpu<'a> {
                         self.vram.buffer.write(x, y, xor_res);
                         self.vram.write(x, y, xor_res);
 
+                        // if xor_res == 1 {
+                        //     self.display
+                        //         .canvas
+                        //         .set_draw_color(constants::FOREGROUND_COLOR);
+                        // } else {
+                        //     self.display
+                        //         .canvas
+                        //         .set_draw_color(constants::BACKGROUND_COLOR);
+                        // }
+
                         sx += 1;
                     }
                     sx = 0;
@@ -348,6 +384,7 @@ impl<'a> Cpu<'a> {
                 }
 
                 if self.vram.buffer.len() > 0 {
+                    // self.display.canvas.present();
                     self.display.set_refresh_flag(true);
                 }
             }

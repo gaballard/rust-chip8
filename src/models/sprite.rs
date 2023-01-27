@@ -7,17 +7,20 @@ const MAX_SPRITE_LENGTH: usize = constants::MAX_SPRITE_HEIGHT * constants::MAX_S
 ///
 /// Sprite
 ///
+/// Stores sprite data along with current and previous positions.
+///
 #[derive(Copy, Clone, Debug)]
 pub struct Sprite<'a> {
-    data: &'a [u8],
+    pub id: u16,
+    pub data: &'a [u8],
     pub points: [Point; MAX_SPRITE_LENGTH],
     pub position: [usize; 2],
-    pub prev_position: [usize; 2],
+    pub prev_position: Option<[usize; 2]>,
 }
 
 #[allow(dead_code)]
 impl<'a> Sprite<'a> {
-    pub fn new(data: &'a [u8], position: [usize; 2]) -> Self {
+    pub fn new(id: u16, data: &'a [u8], position: [usize; 2]) -> Self {
         let points = [Point::new(0, 0); MAX_SPRITE_LENGTH];
 
         let x = position[0];
@@ -39,9 +42,10 @@ impl<'a> Sprite<'a> {
         }
 
         Self {
+            id,
             data,
             position,
-            prev_position: [0; 2],
+            prev_position: None,
             points,
         }
     }
@@ -56,10 +60,6 @@ impl<'a> Sprite<'a> {
 
     pub fn position(&self) -> &[usize; 2] {
         &self.position
-    }
-
-    pub fn prev_position(&self) -> &[usize; 2] {
-        &self.prev_position
     }
 
     pub fn data(&self) -> &[u8] {
@@ -78,7 +78,8 @@ impl<'a> Sprite<'a> {
                 y = y % constants::SCREEN_HEIGHT;
             }
 
-            self.prev_position = self.position.clone();
+            self.prev_position = Some(self.position);
+            // self.prev_position = self.position.clone();
             self.position = [x, y];
         }
     }
