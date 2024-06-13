@@ -8,6 +8,7 @@ pub struct Stack {
 }
 
 impl Stack {
+    #[inline]
     pub fn new() -> Self {
         Self {
             data: Box::new([0; 16]),
@@ -15,11 +16,13 @@ impl Stack {
         }
     }
 
+    #[inline]
     pub fn push(&mut self, value: u16) {
         self.pointer += 1;
         self.data[self.pointer as usize] = value;
     }
 
+    #[inline]
     pub fn pop(&mut self) -> u16 {
         let addr = self.data[self.pointer as usize];
         self.pointer -= 1;
@@ -27,6 +30,7 @@ impl Stack {
         addr
     }
 
+    #[inline]
     pub fn clear(&mut self) {
         self.data = Box::new([0; 16]);
         self.pointer = 0;
