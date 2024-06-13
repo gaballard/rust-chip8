@@ -1,11 +1,8 @@
 use dotenv::dotenv;
 use env_logger;
 use log::debug;
-use sdl2::sys::Time;
-use std::borrow::Borrow;
 use std::env;
 use std::fs;
-use std::ops::Sub;
 use std::time::Duration;
 
 mod components;
@@ -61,18 +58,13 @@ fn main() {
 
     // Emulator timing
     let target_timestep = 1_000 / constants::TARGET_CLOCK_SPEED as u32;
-    let mut fps: u32 = 0;
     let mut frame_count: u32 = 0;
 
-    let mut fps_timer = sdl_context
-        .timer()
-        .expect("FPS counting timer failed to initialize in main");
-    let mut frame_timer = sdl_context
+    let frame_timer = sdl_context
         .timer()
         .expect("FPS delay timer failed to initialize in main");
 
-    let mut prev_fps_tick = fps_timer.ticks();
-    let mut prev_frame_tick = frame_timer.ticks();
+    let mut prev_frame_tick: u32;
 
     // Main loop
     'emulate: loop {
@@ -90,18 +82,12 @@ fn main() {
         }
         keypad.read_keypad(&mut cpu.keys);
 
-        if debug_mode && !should_execute {
-            continue;
+        if debug_mode {
+            if !should_execute {
+                continue;
+            }
+            debug!("Executing frame {}...", frame_count);
         }
-
-        debug!("Executing frame {}...", frame_count);
-
-        // let mut average_fps = frame_count / (fps_timer.ticks() / 1_000);
-        // if average_fps > 2_000_000 {
-        //     average_fps = 0;
-        // }
-
-        // debug!("FPS: {}", average_fps);
 
         // Emulate cycle
         cpu.emulate_cycle();
@@ -113,16 +99,12 @@ fn main() {
 
         // Get delta time
         let dt = frame_timer.ticks() - prev_frame_tick;
-        // let dt = target_timestep - frame_ticks;
-        // let mut dt_sub = target_timestep.overflowing_sub(frame_ticks);
-        // let dt = if dt_sub.1 == true { dt_sub.0 } else { 0 };
 
         cpu.update_timers(dt as f32);
 
         // Delay execution to match target FPS
         if dt < target_timestep {
-            frame_timer.delay(target_timestep - dt)
-            // std::thread::sleep(Duration::from_millis((target_timestep - dt).into()));
+            std::thread::sleep(Duration::from_millis((target_timestep - dt).into()));
         }
     }
 

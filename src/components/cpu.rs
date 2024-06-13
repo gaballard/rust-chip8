@@ -1,6 +1,3 @@
-use core::num;
-use std::ops::Add;
-
 use beep::beep;
 use log::debug;
 use rand::{rngs::ThreadRng, Rng};
@@ -347,6 +344,7 @@ impl<'a> Cpu<'a> {
                     len, x, y, sprite_data
                 );
 
+                // Skip system fonts
                 if self.i >= 0x200 {
                     let sprite = self.vram.read_sprite((self.i, vx, vy));
 
@@ -368,21 +366,17 @@ impl<'a> Cpu<'a> {
                                             7 - sx as u8,
                                         );
 
-                                        let mut vx = coords.0 + sx;
-                                        let mut vy = coords.1 + sy;
+                                        let vx = coords.0 + sx;
+                                        let vy = coords.1 + sy;
 
                                         if vx <= constants::SCREEN_WIDTH - 1
                                             && vy <= constants::SCREEN_HEIGHT - 1
                                             && *bit == 1
                                         {
-                                            // Need to keep track of fonts drawn to the screen and re-draw them when erased in this loop
-                                            // Or we keep track of each pixel's history?
-
                                             // Create two arrays for pixels being turned on and off
                                             //  instead of overwriting the current VRAM w/both
                                             // Then make the "off" pixels fade out in the Display component
 
-                                            // How do we know what this pixel was BEFORE we drew the sprite we're erasing?
                                             self.vram.write(vx, vy, self.vram.read(vx, vy) ^ bit);
                                         }
 
@@ -391,34 +385,11 @@ impl<'a> Cpu<'a> {
                                     sx = 0;
                                     sy += 1;
                                 }
-                                // while sy < len.try_into().unwrap() {
-                                //     let vy = coords.1 + sy;
-                                //     if vy <= constants::SCREEN_HEIGHT - 1 {
-                                //         while sx < 8 {
-                                //             let vx = coords.0 + sx;
-                                //             if vx <= constants::SCREEN_WIDTH - 1 {
-                                //                 debug!(
-                                //                     "Curr ({},{}): {}",
-                                //                     vx,
-                                //                     vy,
-                                //                     self.vram.read(vx, vy),
-                                //                 );
-                                //                 // What was this space BEFORE the sprite we're about to erase?
-                                //                 self.vram.write(vx, vy, 0);
-                                //             }
-                                //             sx += 1;
-                                //         }
-                                //     }
-                                //     sx = 0;
-                                //     sy += 1;
-                                // }
                             }
                         }
                         None => {}
                     }
                 }
-
-                debug!("Drawing sprite");
 
                 let mut sy: usize = 0;
                 let mut sx: usize = 0;
@@ -455,9 +426,7 @@ impl<'a> Cpu<'a> {
                     sy += 1;
                 }
 
-                // if self.i >= 0x200 {
                 self.vram.write_sprite((self.i, vx, vy), x, y);
-                // }
             }
             0xE000 => match self.instruction & 0x00FF {
                 0x9E => {
