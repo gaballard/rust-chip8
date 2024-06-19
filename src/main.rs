@@ -47,7 +47,7 @@ fn main() {
     let mut tape = Tape::new();
     let mut display = Display::new(&platform);
     let mut keypad = Keypad::new(&platform.get_sdl_context());
-    let mut cpu = Cpu::new();
+    let mut cpu = Cpu::new(constants::SCHIP_MODE);
 
     tape.load_rom(cartridge_filename);
 
@@ -90,37 +90,41 @@ fn main() {
         // Emulate cycle
         cpu.tick();
 
+        if cpu.quit_flag {
+            break 'emulate;
+        }
+
         // Update display
         display.canvas.set_draw_color(display.background_color);
         display.canvas.clear();
 
         display.draw_window(
-            10,
-            10,
-            (constants::SCREEN_WIDTH * display.display_scale_factor + 2) as u32,
-            (constants::SCREEN_HEIGHT * display.display_scale_factor + 2) as u32,
+            0,
+            0,
+            (cpu.vram.get_screen_width() * display.display_scale_factor + 2) as u32,
+            (cpu.vram.get_screen_height() * display.display_scale_factor + 2) as u32,
         );
 
         display.draw_text(
             cartridge_filename.as_str(),
-            10,
-            constants::SCREEN_HEIGHT * constants::VIDEO_SCALE + 22,
+            0,
+            cpu.vram.get_screen_height() * constants::VIDEO_SCALE + 22,
         );
 
-        let log_x = (constants::SCREEN_WIDTH * display.display_scale_factor + 42) as i32;
+        // let log_x = (cpu.vram.get_screen_width() * display.display_scale_factor + 42) as i32;
 
-        display.draw_window(
-            (constants::SCREEN_WIDTH * display.display_scale_factor + 42) as i32,
-            10,
-            (constants::SCREEN_WIDTH * display.display_scale_factor - 32) as u32,
-            (constants::SCREEN_HEIGHT * display.display_scale_factor + 2) as u32,
-        );
+        // display.draw_window(
+        //     (screen_width * display.display_scale_factor + 42) as i32,
+        //     10,
+        //     (screen_width * display.display_scale_factor - 32) as u32,
+        //     (screen_height * display.display_scale_factor + 2) as u32,
+        // );
 
-        display.draw_text(
-            frame_count.to_string().as_str(),
-            log_x as usize,
-            constants::SCREEN_HEIGHT * constants::VIDEO_SCALE + 22,
-        );
+        // display.draw_text(
+        //     frame_count.to_string().as_str(),
+        //     log_x as usize,
+        //     screen_height * constants::VIDEO_SCALE + 22,
+        // );
 
         display.draw(&cpu.vram);
 

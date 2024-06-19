@@ -96,12 +96,12 @@ impl<'a> Display<'a> {
     pub fn draw(&mut self, vram: &VideoMemory) {
         let mut pixels: Vec<Rect> = Vec::new();
 
-        for y in 0..constants::SCREEN_HEIGHT {
-            for x in 0..constants::SCREEN_WIDTH {
+        for y in 0..vram.get_screen_height() {
+            for x in 0..vram.get_screen_width() {
                 if *vram.read(x as usize, y as usize) == 1 {
                     pixels.push(Rect::new(
-                        (11 + x * self.display_scale_factor as usize) as i32,
-                        (11 + y * self.display_scale_factor as usize) as i32,
+                        (1 + x * self.display_scale_factor as usize) as i32,
+                        (1 + y * self.display_scale_factor as usize) as i32,
                         self.display_scale_factor as u32,
                         self.display_scale_factor as u32,
                     ))
