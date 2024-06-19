@@ -1,6 +1,8 @@
 use dotenv::dotenv;
 use env_logger;
 use log::debug;
+use peripherals::Tape;
+use platform::Platform;
 use std::env;
 use std::fs;
 use std::time::Duration;
@@ -10,6 +12,7 @@ mod constants;
 mod fonts;
 mod models;
 mod peripherals;
+mod platform;
 mod utils;
 
 use components::Cpu;
@@ -35,32 +38,28 @@ fn main() {
         panic!("Must include path to ROM file!");
     }
     let cartridge_filename = &args[1];
-    let program_data = fs::read(cartridge_filename).unwrap_or(Vec::new());
-    if program_data.len() > constants::MAX_ROM_SIZE {
-        panic!(
-            "ROM is too big! {}b is greater than the {}b max size",
-            program_data.len(),
-            constants::MAX_ROM_SIZE,
-        );
-    }
 
     // Emulator settings
     let mut debug_mode = false;
 
     // Set up SDL context
-    let sdl_context = sdl2::init().expect("SDL2 context failed to initialize in main");
+    let platform = Platform::new();
 
-    let mut display = Display::new(&sdl_context);
-    let mut keypad = Keypad::new(&sdl_context);
-    let mut cpu = Cpu::new(&mut display);
+    let mut tape = Tape::new();
+    let mut display = Display::new(&platform);
+    let mut keypad = Keypad::new(&platform.get_sdl_context());
+    let mut cpu = Cpu::new();
 
-    cpu.load_program(program_data);
+    tape.load_rom(cartridge_filename);
+
+    cpu.load_program(tape.rom);
 
     // Emulator timing
     let target_timestep = 1_000 / constants::TARGET_CLOCK_SPEED as u32;
     let mut frame_count: u32 = 0;
 
-    let frame_timer = sdl_context
+    let frame_timer = platform
+        .get_sdl_context()
         .timer()
         .expect("FPS delay timer failed to initialize in main");
 
@@ -93,8 +92,29 @@ fn main() {
         cpu.emulate_cycle();
 
         // Update display
-        cpu.display.refresh(&cpu.vram);
+        display.canvas.set_draw_color(display.background_color);
+        display.canvas.clear();
 
+        display.draw_window(
+            10,
+            10,
+            (constants::SCREEN_WIDTH * display.display_scale_factor + 2) as u32,
+            (constants::SCREEN_HEIGHT * display.display_scale_factor + 2) as u32,
+            // Some(5),
+            None,
+        );
+
+        display.draw_text(
+            cartridge_filename.as_str(),
+            10,
+            constants::SCREEN_HEIGHT * constants::VIDEO_SCALE + 22,
+        );
+
+        display.draw(&cpu.vram);
+
+        display.canvas.present();
+
+        // Increment frame count
         frame_count = frame_count.wrapping_add(1);
 
         // Get delta time

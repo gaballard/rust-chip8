@@ -7,7 +7,6 @@ use crate::{
     constants,
     fonts::CHIP8_FONTS,
     models::{InputBuffer, Registers, Stack, Timer},
-    peripherals::Display,
     utils::read_bit_from_byte,
 };
 
@@ -46,10 +45,11 @@ impl ProgramCounter {
 ///
 /// CPU
 ///
-pub struct Cpu<'a> {
+pub struct Cpu {
     instruction: u16,
     ram: Memory,
     pub vram: VideoMemory,
+    pub vram_changed: bool,
     v: Registers,
     i: u16,
     pc: ProgramCounter,
@@ -58,16 +58,19 @@ pub struct Cpu<'a> {
     sound_timer: Timer,
     rng: ThreadRng,
     pub keys: InputBuffer,
-    pub display: &'a mut Display,
+    // pub display: &'a mut Display,
+    key_register: u8,
     pause: bool,
 }
 
-impl<'a> Cpu<'a> {
-    pub fn new(display: &'a mut Display) -> Self {
+impl Cpu {
+    pub fn new(// display: &'a mut Display
+    ) -> Self {
         let mut cpu = Self {
             instruction: 0,
             ram: Memory::new(),
             vram: VideoMemory::new(),
+            vram_changed: false,
             v: Registers::new(),
             i: 0,
             pc: ProgramCounter::new(),
@@ -76,7 +79,8 @@ impl<'a> Cpu<'a> {
             delay_timer: Timer::new(0, 0.0, constants::TARGET_CLOCK_SPEED),
             sound_timer: Timer::new(0, 0.0, constants::TARGET_CLOCK_SPEED),
             keys: InputBuffer::new(),
-            display,
+            // display,
+            key_register: 0,
             pause: false,
         };
 
@@ -142,6 +146,7 @@ impl<'a> Cpu<'a> {
             for key in 0..15 as usize {
                 if *self.keys.get(key) {
                     self.pause = false;
+                    self.v.write(self.key_register, key as u8);
                 }
             }
         }
@@ -171,7 +176,7 @@ impl<'a> Cpu<'a> {
                     debug!("00E0 - CLS");
                     // Clear the display.
                     self.vram.clear();
-                    self.display.refresh(&self.vram);
+                    self.vram_changed = true;
                 }
                 0xEE => {
                     debug!("00EE - RET");
@@ -415,6 +420,7 @@ impl<'a> Cpu<'a> {
 
                             if xor_res == 1 {
                                 self.v.write(0xF, 1);
+                                self.vram_changed = true;
                             }
 
                             self.vram.write(vx, vy, xor_res);
@@ -459,6 +465,7 @@ impl<'a> Cpu<'a> {
                     // All execution stops until a key is pressed, then the value of that key is stored in Vx.
                     if !self.pause {
                         self.pause = true;
+                        self.key_register = vx;
                     }
                 }
                 0x15 => {
