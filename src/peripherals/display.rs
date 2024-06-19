@@ -1,8 +1,7 @@
 use sdl2::pixels::Color;
 use sdl2::render::TextureCreator;
-use sdl2::ttf::{Font, Sdl2TtfContext};
+use sdl2::ttf::Font;
 use sdl2::video::WindowContext;
-use sdl2::Sdl;
 use sdl2::{rect::Rect, render::Canvas, video::Window};
 
 use crate::components::VideoMemory;
@@ -12,7 +11,6 @@ use crate::platform::Platform;
 pub struct Display<'a> {
     pub canvas: Canvas<Window>,
     pub font: Font<'a, 'static>,
-    text_buffer: Vec<(String, usize, usize)>,
     texture_creator: TextureCreator<WindowContext>,
     pub display_scale_factor: usize,
     pub foreground_color: Color,
@@ -55,7 +53,7 @@ impl<'a> Display<'a> {
         Display {
             canvas,
             font,
-            text_buffer: Vec::new(),
+            // text_buffer: Vec::new(),
             texture_creator,
             display_scale_factor,
             background_color,
@@ -86,34 +84,11 @@ impl<'a> Display<'a> {
             .expect("Error rendering texture");
     }
 
-    pub fn draw_window(
-        &mut self,
-        x: i32,
-        y: i32,
-        width: u32,
-        height: u32,
-        border_size: Option<u32>,
-    ) {
-        let border = match border_size {
-            Some(size) => size,
-            None => 1,
-        };
-
+    pub fn draw_window(&mut self, x: i32, y: i32, width: u32, height: u32) {
         let rect = Rect::new(x, y, width, height);
-
-        // let top = Rect::new(x, y, width, border);
-        // let left = Rect::new(x, y + border as i32, border, height - border * 2);
-        // let right = Rect::new(
-        //     x + width as i32 - border as i32,
-        //     y + border as i32,
-        //     border,
-        //     height - border * 2,
-        // );
-        // let bottom = Rect::new(x, y + height as i32 - border as i32, width, border);
 
         self.canvas.set_draw_color(self.foreground_color);
         self.canvas
-            // .draw_rects(&[top, left, right, bottom])
             .draw_rects(&[rect])
             .expect("Error drawing window");
     }

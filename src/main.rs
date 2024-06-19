@@ -4,7 +4,6 @@ use log::debug;
 use peripherals::Tape;
 use platform::Platform;
 use std::env;
-use std::fs;
 use std::time::Duration;
 
 mod components;
@@ -89,7 +88,7 @@ fn main() {
         }
 
         // Emulate cycle
-        cpu.emulate_cycle();
+        cpu.tick();
 
         // Update display
         display.canvas.set_draw_color(display.background_color);
@@ -100,13 +99,26 @@ fn main() {
             10,
             (constants::SCREEN_WIDTH * display.display_scale_factor + 2) as u32,
             (constants::SCREEN_HEIGHT * display.display_scale_factor + 2) as u32,
-            // Some(5),
-            None,
         );
 
         display.draw_text(
             cartridge_filename.as_str(),
             10,
+            constants::SCREEN_HEIGHT * constants::VIDEO_SCALE + 22,
+        );
+
+        let log_x = (constants::SCREEN_WIDTH * display.display_scale_factor + 42) as i32;
+
+        display.draw_window(
+            (constants::SCREEN_WIDTH * display.display_scale_factor + 42) as i32,
+            10,
+            (constants::SCREEN_WIDTH * display.display_scale_factor - 32) as u32,
+            (constants::SCREEN_HEIGHT * display.display_scale_factor + 2) as u32,
+        );
+
+        display.draw_text(
+            frame_count.to_string().as_str(),
+            log_x as usize,
             constants::SCREEN_HEIGHT * constants::VIDEO_SCALE + 22,
         );
 
@@ -119,8 +131,6 @@ fn main() {
 
         // Get delta time
         let dt = frame_timer.ticks() - prev_frame_tick;
-
-        cpu.update_timers(dt as f32);
 
         // Delay execution to match target FPS
         if dt < target_timestep {

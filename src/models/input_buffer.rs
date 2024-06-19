@@ -15,11 +15,6 @@ impl InputBuffer {
     }
 
     #[inline]
-    pub fn get_all(&self) -> &Box<[bool; 16]> {
-        &self.buffer
-    }
-
-    #[inline]
     pub fn get(&self, key: usize) -> &bool {
         &self.buffer[key]
     }
