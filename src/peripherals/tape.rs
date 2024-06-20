@@ -23,12 +23,13 @@ impl Tape {
         }
     }
 
-    pub fn load_rom(&mut self, path: &String) {
-        let program_data = fs::read(path).unwrap_or(Vec::new());
+    pub fn load_rom(&mut self, filename: &String) {
+        let program_data = fs::read(format!("{}/{}", constants::ROM_FOLDER, filename).as_str())
+            .unwrap_or(Vec::new());
         let size = program_data.len();
         if size >= constants::MAX_ROM_SIZE as usize {
             panic!(
-                "ROM is too big! {}b is greater than the {}b max size",
+                "ROM is too big! {}B is greater than the {}B max size",
                 size,
                 constants::MAX_ROM_SIZE,
             );

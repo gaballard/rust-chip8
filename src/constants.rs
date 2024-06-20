@@ -3,6 +3,7 @@ use sdl2::pixels::Color;
 // Emulator
 pub const EMULATOR_NAME: &str = "Wow! Another CHIP-8 Emulator!";
 pub const MAX_ROM_SIZE: usize = 3585;
+pub const ROM_FOLDER: &str = "./roms";
 
 // Display
 pub const _HIRES_SCREEN_WIDTH: usize = 128;
@@ -18,7 +19,7 @@ pub const BEEP_FREQ_HZ: i32 = 440 * 8;
 
 // CPU
 pub const SCHIP_MODE: bool = false;
-pub const TARGET_CLOCK_SPEED: usize = 240;
+pub const TARGET_CLOCK_SPEED: usize = 120;
 pub const SYSTEM_RAM: u16 = 4096;
 pub const OPCODE_SIZE: u16 = 2;
 

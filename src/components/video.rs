@@ -29,11 +29,11 @@ impl VideoMemory {
         self.data[y][x] = value;
     }
 
-    pub fn read_sprite(&self, key: (u16, u8, u8)) -> Option<(usize, usize)> {
+    pub fn _read_sprite(&self, key: (u16, u8, u8)) -> Option<(usize, usize)> {
         self.sprites.get(&key).copied()
     }
 
-    pub fn write_sprite(&mut self, key: (u16, u8, u8), x: usize, y: usize) {
+    pub fn _write_sprite(&mut self, key: (u16, u8, u8), x: usize, y: usize) {
         self.sprites.insert(key, (x, y));
     }
 

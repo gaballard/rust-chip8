@@ -111,11 +111,9 @@ impl Cpu {
             self.sound_timer -= 1;
         }
 
-        // CHIP-8 processes two instructions per clock cycle
-        // for _ in 0..1 {
         let opcode = self.read_instruction();
+        self.pc.next();
         self.execute_instruction(opcode);
-        // }
     }
 
     #[inline]
@@ -124,8 +122,6 @@ impl Cpu {
     }
 
     fn execute_instruction(&mut self, instruction: u16) {
-        self.pc.next();
-
         let opcode: Opcode = (
             ((instruction & 0xF000) >> 12) as u8,
             ((instruction & 0x0F00) >> 8) as u8,
@@ -141,14 +137,14 @@ impl Cpu {
         let nnn = instruction & 0x0FFF;
 
         match opcode {
-            (0x0, 0x0, 0xC, _) => self.scroll_down(n), // SCHIP only
+            (0x0, 0x0, 0xC, _) => self.scd(n), // SCHIP only
             (0x0, 0x0, 0xE, 0x0) => self.cls(),
             (0x0, 0x0, 0xE, 0xE) => self.ret(),
-            (0x0, 0x0, 0xF, 0xB) => self.scroll_right(), // SCHIP only
-            (0x0, 0x0, 0xF, 0xC) => self.scroll_left(),  // SCHIP only
-            (0x0, 0x0, 0xF, 0xD) => self.exit(),         // SCHIP only
-            (0x0, 0x0, 0xF, 0xE) => self.lor(),          // SCHIP only
-            (0x0, 0x0, 0xF, 0xF) => self.hir(),          // SCHIP only
+            (0x0, 0x0, 0xF, 0xB) => self.scr(),  // SCHIP only
+            (0x0, 0x0, 0xF, 0xC) => self.scl(),  // SCHIP only
+            (0x0, 0x0, 0xF, 0xD) => self.exit(), // SCHIP only
+            (0x0, 0x0, 0xF, 0xE) => self.low(),  // SCHIP only
+            (0x0, 0x0, 0xF, 0xF) => self.high(), // SCHIP only
             (0x1, _, _, _) => self.jp(nnn),
             (0x2, _, _, _) => self.call(nnn),
             (0x3, _, _, _) => self.se_vx(x, kk),
@@ -178,23 +174,23 @@ impl Cpu {
             (0xF, _, 0x1, 0x8) => self.ld_st_vx(x),
             (0xF, _, 0x1, 0xE) => self.add_i_vx(x),
             (0xF, _, 0x2, 0x9) => self.ld_f_vx(x),
-            (0xF, _, 0x3, 0x0) => self.ld_d_vx(x), // SCHIP only
+            (0xF, _, 0x3, 0x0) => self.ld_hf_vx(x), // SCHIP only
             (0xF, _, 0x3, 0x3) => self.ld_b_vx(x),
             (0xF, _, 0x5, 0x5) => self.ld_i_vx(x), // SCHIP behavior
             (0xF, _, 0x6, 0x5) => self.ld_vx_i(x),
-            (0xF, _, 0x7, 0x5) => self.store(x), // SCHIP only
-            (0xF, _, 0x8, 0x5) => self.read(x),  // SCHIP only
+            (0xF, _, 0x7, 0x5) => self.ld_r_vx(x), // SCHIP only
+            (0xF, _, 0x8, 0x5) => self.ld_vx_r(x), // SCHIP only
             _ => self.no_op(opcode),
         }
     }
 
     ///
-    /// 00Cn - Scroll Down (SCHIP only)
+    /// 00Cn - SCD (SCHIP only)
     ///
     /// Scroll display N lines down.
     ///
-    pub fn scroll_down(&mut self, n: u8) {
-        debug!("00Cn - Scroll Down {} lines", n);
+    pub fn scd(&mut self, n: u8) {
+        debug!("00Cn - SCD {}", n);
         if !self.schip_mode {
             debug!("Can't scroll - not in SCHIP mode");
             return;
@@ -225,12 +221,12 @@ impl Cpu {
     }
 
     ///
-    /// 00FB - Scroll Right (SCHIP only)
+    /// 00FB - SCR (SCHIP only)
     ///
     /// Scroll display 4 pixels to the right.
     ///
-    pub fn scroll_right(&mut self) {
-        debug!("00FB - Scroll Right");
+    pub fn scr(&mut self) {
+        debug!("00FB - SCR");
         if !self.schip_mode {
             debug!("Can't scroll - not in SCHIP mode");
             return;
@@ -241,12 +237,12 @@ impl Cpu {
     }
 
     ///
-    /// 00FC - Scroll Left (SCHIP only)
+    /// 00FC - SCL (SCHIP only)
     ///
     /// Scroll display 4 pixels to the left.
     ///
-    pub fn scroll_left(&mut self) {
-        debug!("00FC - Scroll Left");
+    pub fn scl(&mut self) {
+        debug!("00FC - SCL");
         if !self.schip_mode {
             debug!("Can't scroll - not in SCHIP mode");
             return;
@@ -271,12 +267,12 @@ impl Cpu {
     }
 
     ///
-    /// 00FE - LOR (SCHIP only)
+    /// 00FE - LOW (SCHIP only)
     ///
     /// Disable hires screen mode.
     ///
-    pub fn lor(&mut self) {
-        debug!("00FE - LOR");
+    pub fn low(&mut self) {
+        debug!("00FE - LOW");
         if !self.schip_mode {
             debug!("Not in SCHIP mode");
             return;
@@ -285,12 +281,12 @@ impl Cpu {
     }
 
     ///
-    /// 00FF - HIR (SCHIP only)
+    /// 00FF - HIGH (SCHIP only)
     ///
     /// Enable hires screen mode.
     ///
-    pub fn hir(&mut self) {
-        debug!("00FF - HIR");
+    pub fn high(&mut self) {
+        debug!("00FF - HIGH");
         if !self.schip_mode {
             debug!("Not in SCHIP mode");
             return;
@@ -607,7 +603,7 @@ impl Cpu {
             self.v.write(0xF, collisions);
         }
 
-        self.vram.write_sprite((self.i, vx, vy), x, y);
+        // self.vram.write_sprite((self.i, vx, vy), x, y);
 
         self.vram_changed = true;
     }
@@ -694,7 +690,7 @@ impl Cpu {
     }
 
     ///
-    /// Fx29 - LD F Vx
+    /// Fx29 - LD F, Vx
     ///
     /// The value of I is set to the 5-byte sprite corresponding to the hex character in Vx.
     ///
@@ -704,12 +700,12 @@ impl Cpu {
     }
 
     ///
-    /// Fx30 - LD D Vx (SCHIP Only)
+    /// Fx30 - LD HF, Vx (SCHIP Only)
     ///
     /// The value of I is set to the 10-byte sprite corresponding to the decimal value of Vx (0-9).
     ///
-    pub fn ld_d_vx(&mut self, vx: u8) {
-        debug!("Fx30 - LD D V{}", vx);
+    pub fn ld_hf_vx(&mut self, vx: u8) {
+        debug!("Fx30 - LD HF, V{}", vx);
         if !self.schip_mode {
             debug!("Not in SCHIP mode");
             return;
@@ -776,12 +772,12 @@ impl Cpu {
     }
 
     ///
-    /// Fx75 - STORE (SCHIP Only)
+    /// Fx75 - LD R, Vx (SCHIP Only)
     ///
     /// Store V0..VX in RPL user flags (X <= 7).
     ///
-    pub fn store(&mut self, _vx: u8) {
-        debug!("Fx75 - HIR");
+    pub fn ld_r_vx(&mut self, vx: u8) {
+        debug!("Fx75 - LD R, V{}", vx);
         if !self.schip_mode {
             debug!("Not in SCHIP mode");
             return;
@@ -789,12 +785,12 @@ impl Cpu {
     }
 
     ///
-    /// Fx85 - READ (SCHIP Only)
+    /// Fx85 - LD Vx, R (SCHIP Only)
     ///
     /// Read V0..VX from RPL user flags (X <= 7).
     ///
-    pub fn read(&mut self, _vx: u8) {
-        debug!("Fx75 - HIR");
+    pub fn ld_vx_r(&mut self, vx: u8) {
+        debug!("Fx75 - LD V{}, R", vx);
         if !self.schip_mode {
             debug!("Not in SCHIP mode");
             return;
