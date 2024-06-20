@@ -1,0 +1,14 @@
+Breakout (Carmelo Cortez, 1979)
+https://github.com/kripod/chip8-roms/blob/master/games/Breakout%20%5BCarmelo%20Cortez%2C%201979%5D.txt
+
+Lunar Lander (Udo Pernisz, 1979)
+https://github.com/kripod/chip8-roms/blob/master/games/Lunar%20Lander%20%5BUdo%20Pernisz%2C%201979%5D.txt
+
+Pong (Paul Vervalin, 1990)
+https://github.com/kripod/chip8-roms/blob/master/games/Pong%20%5BPaul%20Vervalin%2C%201990%5D.txt
+
+Snek (John Earnest, 2021)
+https://johnearnest.github.io/chip8Archive/play.html?p=snek
+
+Tetris (Fran Dachille, 1991)
+https://github.com/kripod/chip8-roms/blob/master/games/Tetris%20%5BFran%20Dachille%2C%201991%5D.txt
