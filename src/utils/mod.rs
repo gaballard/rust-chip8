@@ -1,4 +1,10 @@
+mod compiler;
+mod decompiler;
+
 use std::{convert::TryInto, fmt::Debug};
+
+pub use self::compiler::*;
+pub use self::decompiler::*;
 
 ///
 /// Returns an individual bit from a given byte

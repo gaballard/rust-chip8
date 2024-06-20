@@ -3,8 +3,9 @@ use dotenv::dotenv;
 use env_logger;
 use log::debug;
 use platform::Platform;
-use std::env;
 use std::time::Duration;
+use std::{env, process::exit};
+use utils::Decompiler;
 
 mod components;
 mod constants;
@@ -28,15 +29,34 @@ pub enum EmulatorState {
     Step,
 }
 
+fn decompile(args: &Vec<String>, input_filename: &String) {
+    let mut decompiler = Decompiler::new();
+    let output_filename = if args.len() >= 4 {
+        &args[3]
+    } else {
+        panic!("Must include output path")
+    };
+    decompiler.decompile(input_filename, output_filename);
+    exit(0);
+}
+
 fn main() {
     env_logger::try_init().expect("Couldn't load env_logger");
     dotenv().expect("Couldn't load settings from `.env` file");
 
     let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
+    if args.len() < 2 {
         panic!("Must include path to ROM file!");
     }
     let cartridge_filename = &args[1];
+
+    let flag = if args.len() >= 3 { &args[2] } else { "" };
+
+    match flag {
+        "--decompile" => decompile(&args, cartridge_filename),
+        "-D" => decompile(&args, cartridge_filename),
+        _ => {}
+    }
 
     // Emulator settings
     let mut debug_mode = false;
