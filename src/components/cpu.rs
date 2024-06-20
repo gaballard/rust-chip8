@@ -550,136 +550,66 @@ impl Cpu {
             "D{}{}{} - DRW V{}, V{}, {}",
             vx, vy, sprite_len, vx, vy, sprite_len
         );
-        // Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
 
-        let mut x = *self.v.read(vx) as usize;
-        let mut y = *self.v.read(vy) as usize;
+        let x = *self.v.read(vx) as usize % self.vram.get_screen_width();
+        let y = *self.v.read(vy) as usize % self.vram.get_screen_height();
 
-        if x > self.vram.get_screen_width() - 1 {
-            x = x % self.vram.get_screen_width();
-        }
-        if y > self.vram.get_screen_height() - 1 {
-            y = y % self.vram.get_screen_height();
-        }
-
-        // let len = self.instruction & 0x000F;
         let sprite_data = self.ram.read_slice(self.i, sprite_len.try_into().unwrap());
 
-        debug!(
-            "Draw the following Sprite with length {} at ({},{}): {:?}",
-            sprite_len, x, y, sprite_data
-        );
+        // if self.i >= constants::PROGRAM_START_ADDR {
+        //     let sprite = self.vram.read_sprite((self.i, vx, vy));
+        //     match sprite {
+        //         Some(coords) => {
+        //             for sy in 0..sprite_len {
+        //                 let vy = (coords.1 + sy as usize) % self.vram.get_screen_height();
+        //                 for sx in 0..8 as u8 {
+        //                     let vx = (coords.0 + sx as usize) % self.vram.get_screen_width();
+        //                     let bit = read_bit_from_byte(&sprite_data[sy as usize], 7 - sx as u8);
 
-        if self.i >= 0x200 {
-            let sprite = self.vram.read_sprite((self.i, vx, vy));
+        //                     // if *bit == 1 {
+        //                         self.vram.write(vx, vy, self.vram.read(vx, vy) ^ bit);
+        //                     // }
+        //                 }
+        //             }
+        //         }
+        //         None => {}
+        //     }
+        // }
 
-            match sprite {
-                Some(coords) => {
-                    debug!(
-                        "Stored sprite position for address {} and V{},V{}: {:?}",
-                        self.i, vx, vy, coords
-                    );
-                    if coords.0 == x && coords.1 == y {
-                        return;
-                    } else {
-                        let mut sy: usize = 0;
-                        let mut sx: usize = 0;
-                        while sy < sprite_len.try_into().unwrap() {
-                            while sx < 8 {
-                                let bit =
-                                    read_bit_from_byte(&sprite_data[sy as usize], 7 - sx as u8);
-
-                                let vx = coords.0 + sx;
-                                let vy = coords.1 + sy;
-
-                                if vx <= self.vram.get_screen_width() - 1
-                                    && vy <= self.vram.get_screen_height() - 1
-                                    && *bit == 1
-                                {
-                                    // Need to keep track of fonts drawn to the screen and re-draw them when erased in this loop
-                                    // Or we keep track of each pixel's history?
-
-                                    // Create two arrays for pixels being turned on and off
-                                    //  instead of overwriting the current VRAM w/both
-                                    // Then make the "off" pixels fade out in the Display component
-
-                                    // How do we know what this pixel was BEFORE we drew the sprite we're erasing?
-                                    self.vram.write(vx, vy, self.vram.read(vx, vy) ^ bit);
-                                }
-
-                                sx += 1;
-                            }
-                            sx = 0;
-                            sy += 1;
-                        }
-                        // while sy < len.try_into().unwrap() {
-                        //     let vy = coords.1 + sy;
-                        //     if vy <= self.vram.get_screen_height() - 1 {
-                        //         while sx < 8 {
-                        //             let vx = coords.0 + sx;
-                        //             if vx <= self.vram.get_screen_width() - 1 {
-                        //                 debug!(
-                        //                     "Curr ({},{}): {}",
-                        //                     vx,
-                        //                     vy,
-                        //                     self.vram.read(vx, vy),
-                        //                 );
-                        //                 // What was this space BEFORE the sprite we're about to erase?
-                        //                 self.vram.write(vx, vy, 0);
-                        //             }
-                        //             sx += 1;
-                        //         }
-                        //     }
-                        //     sx = 0;
-                        //     sy += 1;
-                        // }
-                    }
-                }
-                None => {}
-            }
-        }
-
-        debug!("Drawing sprite");
-
-        let mut sy: usize = 0;
-        let mut sx: usize = 0;
+        let mut collisions: u8 = 0;
 
         self.v.write(0xF, 0);
 
-        while sy < sprite_len.try_into().unwrap() {
-            while sx < 8 {
-                let bit = read_bit_from_byte(&sprite_data[sy as usize], 7 - sx as u8);
+        for sy in 0..sprite_len {
+            let vy = (y + sy as usize) % self.vram.get_screen_height();
+            for sx in 0..8 as u8 {
+                let vx = (x + sx as usize) % self.vram.get_screen_width();
 
-                let mut vx = x + sx;
-                let mut vy = y + sy;
+                let pixel = read_bit_from_byte(&sprite_data[sy as usize], 7 - sx as u8);
 
-                if vx > self.vram.get_screen_width() - 1 {
-                    vx = vx % self.vram.get_screen_width();
-                }
-                if vy > self.vram.get_screen_height() - 1 {
-                    vy = vy % self.vram.get_screen_height();
+                if *pixel == 0 {
+                    continue;
                 }
 
-                if *bit == 1 {
-                    let xor_res = self.vram.read(vx, vy) ^ bit;
-
-                    if xor_res == 1 {
-                        self.v.write(0xF, 1);
-                        self.vram_changed = true;
-                    }
-
-                    self.vram.write(vx, vy, xor_res);
+                if self.vram.read(vx, vy) & pixel == 1 {
+                    if self.schip_mode {
+                        collisions += 1;
+                    } else {
+                        self.v.write(0xF, self.v.read(0xF) | 1)
+                    };
                 }
 
-                sx += 1;
+                self.vram.write(vx, vy, self.vram.read(vx, vy) ^ pixel);
             }
-            sx = 0;
-            sy += 1;
         }
 
-        // if self.i >= 0x200 {
+        if self.schip_mode && collisions > 0 {
+            self.v.write(0xF, collisions);
+        }
+
         self.vram.write_sprite((self.i, vx, vy), x, y);
-        // }
+
+        self.vram_changed = true;
     }
 
     ///

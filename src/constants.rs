@@ -5,8 +5,8 @@ pub const EMULATOR_NAME: &str = "Wow! Another CHIP-8 Emulator!";
 pub const MAX_ROM_SIZE: usize = 3585;
 
 // Display
-pub const HIRES_SCREEN_WIDTH: usize = 128;
-pub const HIRES_SCREEN_HEIGHT: usize = 64;
+pub const _HIRES_SCREEN_WIDTH: usize = 128;
+pub const _HIRES_SCREEN_HEIGHT: usize = 64;
 pub const SCREEN_WIDTH: usize = 64;
 pub const SCREEN_HEIGHT: usize = 32;
 pub const VIDEO_SCALE: usize = 12;

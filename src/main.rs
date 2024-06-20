@@ -100,7 +100,9 @@ fn main() {
             audio.stop_beep()
         }
 
-        display.draw(&cpu.vram);
+        if cpu.vram_changed {
+            display.draw(&cpu.vram);
+        }
 
         frame_count = frame_count.wrapping_add(1);
 

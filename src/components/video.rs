@@ -8,7 +8,7 @@ use crate::constants;
 #[derive(Debug)]
 pub struct VideoMemory {
     pub hires_mode: bool,
-    data: [[u8; constants::HIRES_SCREEN_WIDTH]; constants::HIRES_SCREEN_HEIGHT],
+    pub data: [[u8; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT],
     sprites: HashMap<(u16, u8, u8), (usize, usize)>,
 }
 
@@ -16,7 +16,7 @@ impl VideoMemory {
     pub fn new() -> Self {
         Self {
             hires_mode: false,
-            data: [[0; constants::HIRES_SCREEN_WIDTH]; constants::HIRES_SCREEN_HEIGHT],
+            data: [[0; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT],
             sprites: HashMap::new(),
         }
     }
@@ -38,13 +38,13 @@ impl VideoMemory {
     }
 
     pub fn clear(&mut self) {
-        self.data = [[0; constants::HIRES_SCREEN_WIDTH]; constants::HIRES_SCREEN_HEIGHT];
+        self.data = [[0; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT];
         self.sprites = HashMap::new();
     }
 
     pub fn get_screen_width(&self) -> usize {
         if self.hires_mode {
-            constants::HIRES_SCREEN_WIDTH
+            constants::SCREEN_WIDTH
         } else {
             constants::SCREEN_WIDTH
         }
@@ -52,7 +52,7 @@ impl VideoMemory {
 
     pub fn get_screen_height(&self) -> usize {
         if self.hires_mode {
-            constants::HIRES_SCREEN_HEIGHT
+            constants::SCREEN_HEIGHT
         } else {
             constants::SCREEN_HEIGHT
         }

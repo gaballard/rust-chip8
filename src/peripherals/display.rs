@@ -31,8 +31,8 @@ impl<'a> Display<'a> {
         let window = video_subsystem
             .window(
                 &constants::EMULATOR_NAME,
-                (constants::SCREEN_WIDTH * 2 * display_scale_factor + 20) as u32,
-                (constants::SCREEN_HEIGHT * 2 * display_scale_factor + 20) as u32,
+                (constants::SCREEN_WIDTH * display_scale_factor) as u32,
+                (constants::SCREEN_HEIGHT * display_scale_factor) as u32,
             )
             .position_centered()
             .build()
@@ -89,28 +89,24 @@ impl<'a> Display<'a> {
     }
 
     pub fn draw(&mut self, vram: &VideoMemory) {
-        let mut pixels: Vec<Rect> = Vec::new();
-
         for y in 0..vram.get_screen_height() {
             for x in 0..vram.get_screen_width() {
-                if *vram.read(x as usize, y as usize) == 1 {
-                    pixels.push(Rect::new(
+                self.canvas.set_draw_color(if *vram.read(x, y) == 1 {
+                    self.foreground_color
+                } else {
+                    self.background_color
+                });
+
+                self.canvas
+                    .fill_rect(Rect::new(
                         (x * self.display_scale_factor as usize) as i32,
                         (y * self.display_scale_factor as usize) as i32,
                         self.display_scale_factor as u32,
                         self.display_scale_factor as u32,
                     ))
-                }
+                    .expect(format!("Failed to draw pixel at {},{}", x, y).as_str());
             }
         }
-
-        self.canvas.set_draw_color(self.background_color);
-        self.canvas.clear();
-
-        self.canvas.set_draw_color(self.foreground_color);
-        self.canvas
-            .fill_rects(&pixels)
-            .expect("Failed to draw pixels");
 
         self.canvas.present();
     }
