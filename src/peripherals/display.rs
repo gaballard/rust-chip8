@@ -11,7 +11,7 @@ use crate::platform::Platform;
 pub struct Display<'a> {
     pub canvas: Canvas<Window>,
     pub font: Font<'a, 'static>,
-    texture_creator: TextureCreator<WindowContext>,
+    _texture_creator: TextureCreator<WindowContext>,
     pub display_scale_factor: usize,
     pub foreground_color: Color,
     pub background_color: Color,
@@ -38,7 +38,7 @@ impl<'a> Display<'a> {
             .build()
             .expect("SDL2 failed to create window in Gpu::new");
 
-        let canvas = window
+        let mut canvas = window
             .into_canvas()
             .build()
             .expect("SDL2 failed to initialize window canvas in Gpu::new");
@@ -48,20 +48,24 @@ impl<'a> Display<'a> {
             .load_font("./fonts/SperryPC_CGA.ttf", 16)
             .expect("Font does not exist");
 
-        let texture_creator = canvas.texture_creator();
+        let _texture_creator = canvas.texture_creator();
+
+        // Reset display
+        canvas.set_draw_color(background_color);
+        canvas.clear();
+        canvas.present();
 
         Display {
             canvas,
             font,
-            // text_buffer: Vec::new(),
-            texture_creator,
+            _texture_creator,
             display_scale_factor,
             background_color,
             foreground_color,
         }
     }
 
-    pub fn draw_text(&mut self, text: &str, x: usize, y: usize) {
+    pub fn _draw_text(&mut self, text: &str, x: usize, y: usize) {
         let surface = self
             .font
             .render(text)
@@ -69,7 +73,7 @@ impl<'a> Display<'a> {
             .expect("Error drawing text");
 
         let texture = self
-            .texture_creator
+            ._texture_creator
             .create_texture_from_surface(surface)
             .expect("Failed to create texture from font surface");
 
@@ -84,15 +88,6 @@ impl<'a> Display<'a> {
             .expect("Error rendering texture");
     }
 
-    pub fn draw_window(&mut self, x: i32, y: i32, width: u32, height: u32) {
-        let rect = Rect::new(x, y, width, height);
-
-        self.canvas.set_draw_color(self.foreground_color);
-        self.canvas
-            .draw_rects(&[rect])
-            .expect("Error drawing window");
-    }
-
     pub fn draw(&mut self, vram: &VideoMemory) {
         let mut pixels: Vec<Rect> = Vec::new();
 
@@ -100,8 +95,8 @@ impl<'a> Display<'a> {
             for x in 0..vram.get_screen_width() {
                 if *vram.read(x as usize, y as usize) == 1 {
                     pixels.push(Rect::new(
-                        (1 + x * self.display_scale_factor as usize) as i32,
-                        (1 + y * self.display_scale_factor as usize) as i32,
+                        (x * self.display_scale_factor as usize) as i32,
+                        (y * self.display_scale_factor as usize) as i32,
                         self.display_scale_factor as u32,
                         self.display_scale_factor as u32,
                     ))
@@ -109,27 +104,14 @@ impl<'a> Display<'a> {
             }
         }
 
-        // Create two arrays for pixels being turned on and off
-        //  instead of overwriting the current VRAM w/both
-        // Then make the "off" pixels fade out in the Display component
-
-        // ^^^ that is not quite the way
-        // In this first pass through the drawing algorithm...
-        // Keep track of which pixels were turned off by the XOR in a "pixels to fade" array
-        // Set up a "fade timer" for all those pixels
-        // As the timer counts down, re-draw the pixel until it goes from on to off
-        // Then clear it from the "pixels to fade" array
-
-        // self.canvas.set_draw_color(self.background_color);
-        // self.canvas.clear();
-
-        // self.draw_text("CHIP-8", 5, 5);
+        self.canvas.set_draw_color(self.background_color);
+        self.canvas.clear();
 
         self.canvas.set_draw_color(self.foreground_color);
         self.canvas
             .fill_rects(&pixels)
             .expect("Failed to draw pixels");
 
-        // self.canvas.present();
+        self.canvas.present();
     }
 }

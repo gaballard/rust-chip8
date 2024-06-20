@@ -13,12 +13,12 @@ pub const VIDEO_SCALE: usize = 12;
 pub const FOREGROUND_COLOR: Color = Color::RGB(255, 176, 0); // Amber
 pub const BACKGROUND_COLOR: Color = Color::BLACK;
 
-// Sound
-pub const BEEP_FREQ_HZ: u16 = 440;
+// Audio
+pub const BEEP_FREQ_HZ: i32 = 440 * 8;
 
 // CPU
-pub const SCHIP_MODE: bool = true;
-pub const TARGET_CLOCK_SPEED: usize = 60;
+pub const SCHIP_MODE: bool = false;
+pub const TARGET_CLOCK_SPEED: usize = 240;
 pub const SYSTEM_RAM: u16 = 4096;
 pub const OPCODE_SIZE: u16 = 2;
 

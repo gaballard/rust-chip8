@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use env_logger;
 use log::debug;
-use peripherals::Tape;
+use peripherals::{Audio, Tape};
 use platform::Platform;
 use std::env;
 use std::time::Duration;
@@ -46,6 +46,7 @@ fn main() {
 
     let mut tape = Tape::new();
     let mut display = Display::new(&platform);
+    let audio = Audio::new(&platform.get_sdl_context());
     let mut keypad = Keypad::new(&platform.get_sdl_context());
     let mut cpu = Cpu::new(constants::SCHIP_MODE);
 
@@ -87,56 +88,23 @@ fn main() {
             debug!("Executing frame {}...", frame_count);
         }
 
-        // Emulate cycle
         cpu.tick();
 
-        if cpu.quit_flag {
+        if cpu.schip_mode && cpu.quit_flag {
             break 'emulate;
         }
 
-        // Update display
-        display.canvas.set_draw_color(display.background_color);
-        display.canvas.clear();
-
-        display.draw_window(
-            0,
-            0,
-            (cpu.vram.get_screen_width() * display.display_scale_factor + 2) as u32,
-            (cpu.vram.get_screen_height() * display.display_scale_factor + 2) as u32,
-        );
-
-        display.draw_text(
-            cartridge_filename.as_str(),
-            0,
-            cpu.vram.get_screen_height() * constants::VIDEO_SCALE + 22,
-        );
-
-        // let log_x = (cpu.vram.get_screen_width() * display.display_scale_factor + 42) as i32;
-
-        // display.draw_window(
-        //     (screen_width * display.display_scale_factor + 42) as i32,
-        //     10,
-        //     (screen_width * display.display_scale_factor - 32) as u32,
-        //     (screen_height * display.display_scale_factor + 2) as u32,
-        // );
-
-        // display.draw_text(
-        //     frame_count.to_string().as_str(),
-        //     log_x as usize,
-        //     screen_height * constants::VIDEO_SCALE + 22,
-        // );
+        if cpu.sound_timer > 0 {
+            audio.start_beep();
+        } else {
+            audio.stop_beep()
+        }
 
         display.draw(&cpu.vram);
 
-        display.canvas.present();
-
-        // Increment frame count
         frame_count = frame_count.wrapping_add(1);
 
-        // Get delta time
         let dt = frame_timer.ticks() - prev_frame_tick;
-
-        // Delay execution to match target FPS
         if dt < target_timestep {
             std::thread::sleep(Duration::from_millis((target_timestep - dt).into()));
         }

@@ -9,6 +9,8 @@ use crate::{
     utils::read_bit_from_byte,
 };
 
+pub type Opcode = (u8, u8, u8, u8);
+
 ///
 /// CPU
 ///
@@ -25,7 +27,7 @@ pub struct Cpu {
     pc: ProgramCounter,
     stack: Stack,
     delay_timer: u8,
-    sound_timer: u8,
+    pub sound_timer: u8,
     rng: ThreadRng,
     pub keys: InputBuffer,
     key_register: u8,
@@ -124,7 +126,7 @@ impl Cpu {
     fn execute_instruction(&mut self, instruction: u16) {
         self.pc.next();
 
-        let opcode = (
+        let opcode: Opcode = (
             ((instruction & 0xF000) >> 12) as u8,
             ((instruction & 0x0F00) >> 8) as u8,
             ((instruction & 0x00F0) >> 4) as u8,
@@ -182,7 +184,7 @@ impl Cpu {
             (0xF, _, 0x6, 0x5) => self.ld_vx_i(x),
             (0xF, _, 0x7, 0x5) => self.store(x), // SCHIP only
             (0xF, _, 0x8, 0x5) => self.read(x),  // SCHIP only
-            _ => debug!("Invalid opcode: {:?}", opcode),
+            _ => self.no_op(opcode),
         }
     }
 
@@ -867,5 +869,17 @@ impl Cpu {
             debug!("Not in SCHIP mode");
             return;
         }
+    }
+
+    ///
+    /// NoOp
+    ///
+    /// Catches unknown or invalid opcodes
+    ///
+    pub fn no_op(&self, opcode: Opcode) {
+        debug!(
+            "Invalid opcode at address {}: {:?}",
+            self.pc.address, opcode
+        );
     }
 }
