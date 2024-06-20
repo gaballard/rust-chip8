@@ -1,21 +1,21 @@
+use devices::{Audio, Tape};
 use dotenv::dotenv;
 use env_logger;
 use log::debug;
-use peripherals::{Audio, Tape};
 use platform::Platform;
 use std::env;
 use std::time::Duration;
 
 mod components;
 mod constants;
+mod devices;
 mod fonts;
 mod models;
-mod peripherals;
 mod platform;
 mod utils;
 
 use components::Cpu;
-use peripherals::{Display, Keypad};
+use devices::{Display, Keypad};
 
 ///
 /// Emulator State
