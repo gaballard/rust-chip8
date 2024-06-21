@@ -1,4 +1,6 @@
-use crate::{components::Memory, devices::Tape, models::ProgramCounter};
+use std::fs;
+
+use crate::{components::Memory, constants, devices::Tape, models::ProgramCounter};
 
 ///
 /// Compiler
@@ -20,17 +22,23 @@ impl _Compiler {
         }
     }
 
-    pub fn _load_into_ram(&mut self, filename: &String) -> u32 {
-        self.tape.load_rom(filename);
+    pub fn _compile(&mut self, _input_filename: &String, _output_filename: &String) {
+        let path = format!("{}/{}", constants::ROM_FOLDER, _input_filename);
+        let assembly_data = fs::read_to_string(&path)
+            .expect(format!("File does not exist at path {}", path).as_str());
 
-        let mut address = 0;
-        for v in &self.tape.rom {
-            self.ram.write(address, *v);
-            address += 1;
+        let mut _output: Vec<u8> = Vec::new();
+
+        for assembly_line in assembly_data.split("\n") {
+            let mut line = assembly_line.split(" ");
+            let mut _addr = line.nth(0).unwrap();
+            let mut _command = line.nth(1).unwrap();
+
+            for line_element in assembly_line.split(" ") {
+                if line_element.chars().nth(0).unwrap() == '$' {
+                    _addr = line_element;
+                }
+            }
         }
-
-        self.tape.rom.len().try_into().unwrap()
     }
-
-    pub fn _compile(&mut self, _input_filename: &String, _output_filename: &String) {}
 }
