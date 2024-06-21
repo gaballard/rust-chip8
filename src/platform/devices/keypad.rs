@@ -9,7 +9,7 @@ use crate::EmulatorState;
 
 ///
 /// Keypad
-/// 
+///
 pub struct Keypad {
     event_pump: EventPump,
 }

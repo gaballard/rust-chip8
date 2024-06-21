@@ -10,12 +10,9 @@ use rand::{rngs::ThreadRng, Rng};
 use registers::Registers;
 use stack::Stack;
 
-use crate::{
-    components::{Memory, VideoMemory},
-    constants,
-    fonts::CHIP8_FONTS,
-    utils::read_bit_from_byte,
-};
+use super::{Memory, VideoMemory};
+
+use crate::{constants, fonts::CHIP8_FONTS, utils::read_bit_from_byte};
 
 pub type Opcode = (u8, u8, u8, u8);
 

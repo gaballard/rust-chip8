@@ -4,13 +4,13 @@ use sdl2::ttf::Font;
 use sdl2::video::WindowContext;
 use sdl2::{rect::Rect, render::Canvas, video::Window};
 
-use crate::components::VideoMemory;
+use crate::chip8::VideoMemory;
 use crate::constants;
 use crate::platform::Platform;
 
 ///
 /// Display
-/// 
+///
 pub struct Display<'a> {
     pub canvas: Canvas<Window>,
     pub font: Font<'a, 'static>,

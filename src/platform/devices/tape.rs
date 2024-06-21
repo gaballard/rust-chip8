@@ -23,7 +23,7 @@ impl Tape {
         }
     }
 
-    pub fn load_rom(&mut self, filename: &String) {
+    pub fn read(&mut self, filename: &String) {
         let program_data = fs::read(format!("{}/{}", constants::ROM_FOLDER, filename).as_str())
             .unwrap_or(Vec::new());
         let size = program_data.len();

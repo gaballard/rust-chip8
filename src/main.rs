@@ -1,20 +1,18 @@
-use dotenv::dotenv;
-use env_logger;
-use log::debug;
-use peripherals::{Audio, Tape};
-use platform::Platform;
-use std::env;
-use std::time::Duration;
-
-mod components;
+mod chip8;
 mod constants;
 mod fonts;
-mod peripherals;
 mod platform;
 mod utils;
 
-use components::Cpu;
-use peripherals::{Display, Keypad};
+use dotenv::dotenv;
+use env_logger;
+use log::debug;
+
+use std::env;
+use std::time::Duration;
+
+use chip8::Cpu;
+use platform::{Audio, Display, Keypad, Platform, Tape};
 
 ///
 /// Emulator State
@@ -49,7 +47,7 @@ fn main() {
     let mut keypad = Keypad::new(&platform.get_sdl_context());
     let mut cpu = Cpu::new(constants::SCHIP_MODE);
 
-    tape.load_rom(cartridge_filename);
+    tape.read(cartridge_filename);
 
     cpu.load_program(tape.rom);
 
