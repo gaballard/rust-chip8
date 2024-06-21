@@ -1,7 +1,8 @@
-use sdl2::{ttf::Sdl2TtfContext, Sdl};
+use egui_sdl2_platform::sdl2;
+use sdl2::ttf::Sdl2TtfContext;
 
 pub struct Platform {
-    sdl_context: Sdl,
+    sdl_context: sdl2::Sdl,
     ttf_context: Sdl2TtfContext,
 }
 
@@ -17,7 +18,7 @@ impl Platform {
         }
     }
 
-    pub fn get_sdl_context(&self) -> &Sdl {
+    pub fn get_sdl_context(&self) -> &sdl2::Sdl {
         &self.sdl_context
     }
 

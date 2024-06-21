@@ -1,3 +1,4 @@
+use egui_sdl2_platform::sdl2;
 use sdl2::audio::AudioCallback;
 
 ///

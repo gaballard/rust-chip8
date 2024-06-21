@@ -1,4 +1,3 @@
-extern crate sdl2;
 use std::{fs, time::Duration};
 
 use crate::constants;

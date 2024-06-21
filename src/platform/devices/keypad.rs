@@ -1,5 +1,4 @@
-extern crate sdl2;
-
+use egui_sdl2_platform::sdl2;
 use sdl2::event::Event;
 use sdl2::keyboard::{KeyboardState, Keycode, Scancode};
 use sdl2::EventPump;
