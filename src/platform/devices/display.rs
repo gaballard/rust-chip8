@@ -13,7 +13,7 @@ use crate::platform::Platform;
 ///
 pub struct Display<'a> {
     pub canvas: Canvas<Window>,
-    pub font: Font<'a, 'static>,
+    pub _font: Font<'a, 'static>,
     _texture_creator: TextureCreator<WindowContext>,
     pub display_scale_factor: usize,
     pub foreground_color: Color,
@@ -46,7 +46,7 @@ impl<'a> Display<'a> {
             .build()
             .expect("SDL2 failed to initialize window canvas in Gpu::new");
 
-        let font = platform
+        let _font = platform
             .get_ttf_context()
             .load_font("./fonts/SperryPC_CGA.ttf", 16)
             .expect("Font does not exist");
@@ -60,7 +60,7 @@ impl<'a> Display<'a> {
 
         Display {
             canvas,
-            font,
+            _font,
             _texture_creator,
             display_scale_factor,
             background_color,
@@ -70,7 +70,7 @@ impl<'a> Display<'a> {
 
     pub fn _draw_text(&mut self, text: &str, x: usize, y: usize) {
         let surface = self
-            .font
+            ._font
             .render(text)
             .solid(self.foreground_color)
             .expect("Error drawing text");
