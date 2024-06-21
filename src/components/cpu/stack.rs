@@ -3,7 +3,7 @@
 ///
 #[derive(Debug)]
 pub struct Stack {
-    data: Box<[u16; 16]>,
+    data: [u16; 16],
     pointer: u8,
 }
 
@@ -11,7 +11,7 @@ impl Stack {
     #[inline]
     pub fn new() -> Self {
         Self {
-            data: Box::new([0; 16]),
+            data: [0; 16],
             pointer: 0,
         }
     }
@@ -32,7 +32,7 @@ impl Stack {
 
     #[inline]
     pub fn clear(&mut self) {
-        self.data = Box::new([0; 16]);
+        self.data = [0; 16];
         self.pointer = 0;
     }
 }

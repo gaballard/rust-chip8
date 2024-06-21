@@ -1,11 +1,19 @@
+mod input_buffer;
+mod program_counter;
+mod registers;
+mod stack;
+
+use input_buffer::InputBuffer;
 use log::debug;
+use program_counter::ProgramCounter;
 use rand::{rngs::ThreadRng, Rng};
+use registers::Registers;
+use stack::Stack;
 
 use crate::{
     components::{Memory, VideoMemory},
     constants,
     fonts::CHIP8_FONTS,
-    models::{InputBuffer, ProgramCounter, Registers, Stack},
     utils::read_bit_from_byte,
 };
 
@@ -14,11 +22,13 @@ pub type Opcode = (u8, u8, u8, u8);
 ///
 /// CPU
 ///
+#[must_use]
 pub struct Cpu {
     pub quit_flag: bool,
     pub schip_mode: bool,
     pub hires_mode: bool,
     pub instruction: u16,
+    pub cycle: usize,
     ram: Memory,
     pub vram: VideoMemory,
     pub vram_changed: bool,
@@ -41,6 +51,7 @@ impl Cpu {
             schip_mode,
             hires_mode: false,
             instruction: 0,
+            cycle: 0,
             ram: Memory::new(),
             vram: VideoMemory::new(),
             vram_changed: false,
@@ -89,11 +100,13 @@ impl Cpu {
 
     #[inline]
     pub fn tick(&mut self) {
+        self.cycle = self.cycle.wrapping_add(1);
+
         self.vram_changed = false;
 
         if self.waiting_for_key {
             for key in 0..15 as usize {
-                if *self.keys.get(key) {
+                if *self.keys.get_key(key) {
                     self.waiting_for_key = false;
                     self.v.write(self.key_register, key as u8);
                     self.key_register = 0;
@@ -204,6 +217,7 @@ impl Cpu {
     /// 00E0 - CLS
     ///
     /// Clear the display.
+    ///
     pub fn cls(&mut self) {
         debug!("00E0 - CLS");
         self.vram.clear();
@@ -616,7 +630,7 @@ impl Cpu {
     pub fn skp_vx(&mut self, vx: u8) {
         debug!("Ex9E - SKP V{}", vx);
         let key = *self.v.read(vx) as usize;
-        if *self.keys.get(key) {
+        if *self.keys.get_key(key) {
             self.pc.next();
         }
     }
@@ -628,7 +642,7 @@ impl Cpu {
     ///
     pub fn sknp_vx(&mut self, vx: u8) {
         debug!("ExA1 - SKNP V{}", vx);
-        if !self.keys.get(*self.v.read(vx) as usize) {
+        if !self.keys.get_key(*self.v.read(vx) as usize) {
             self.pc.next();
         }
     }
@@ -641,7 +655,6 @@ impl Cpu {
     pub fn ld_vx_dt(&mut self, vx: u8) {
         debug!("Fx07 - LD V{}, DT", vx);
         self.v.write(vx, self.delay_timer);
-        // self.v.write(vx, *self.delay_timer.get_value());
     }
 
     ///
@@ -665,7 +678,6 @@ impl Cpu {
     pub fn ld_dt_vx(&mut self, vx: u8) {
         debug!("Fx15 - LD DT V{}", vx);
         self.delay_timer = *self.v.read(vx);
-        // self.delay_timer.set_value(*self.v.read(vx));
     }
 
     ///
@@ -676,7 +688,6 @@ impl Cpu {
     pub fn ld_st_vx(&mut self, vx: u8) {
         debug!("Fx18 - LD ST V{}", vx);
         self.sound_timer = *self.v.read(vx);
-        // self.sound_timer.set_value(*self.v.read(vx));
     }
 
     ///

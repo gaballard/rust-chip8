@@ -8,6 +8,9 @@ use crate::components::VideoMemory;
 use crate::constants;
 use crate::platform::Platform;
 
+///
+/// Display
+/// 
 pub struct Display<'a> {
     pub canvas: Canvas<Window>,
     pub font: Font<'a, 'static>,

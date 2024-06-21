@@ -3,29 +3,34 @@
 ///
 #[derive(Debug)]
 pub struct InputBuffer {
-    buffer: Box<[bool; 16]>,
+    buffer: [bool; 16],
 }
 
 impl InputBuffer {
     #[inline]
     pub fn new() -> Self {
         Self {
-            buffer: Box::new([false; 16]),
+            buffer: [false; 16],
         }
     }
 
     #[inline]
-    pub fn get(&self, key: usize) -> &bool {
+    pub fn get_key(&self, key: usize) -> &bool {
         &self.buffer[key]
     }
 
     #[inline]
-    pub fn set(&mut self, key: usize, is_pressed: bool) {
+    pub fn get_buffer(&mut self) -> &mut [bool; 16] {
+        &mut self.buffer
+    }
+
+    #[inline]
+    pub fn _set(&mut self, key: usize, is_pressed: bool) {
         self.buffer[key] = is_pressed;
     }
 
     #[inline]
     pub fn clear(&mut self) {
-        self.buffer = Box::new([false; 16]);
+        self.buffer = [false; 16];
     }
 }

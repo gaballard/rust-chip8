@@ -4,6 +4,7 @@ use crate::constants;
 /// Memory
 ///
 #[derive(Debug)]
+#[must_use]
 pub struct Memory {
     data: [u8; constants::SYSTEM_RAM as usize],
 }
@@ -11,8 +12,7 @@ pub struct Memory {
 impl Memory {
     pub fn new() -> Self {
         Memory {
-            // data: Box::new([0; constants::SYSTEM_RAM as usize]),
-            data: [0; constants::SYSTEM_RAM as usize]
+            data: [0; constants::SYSTEM_RAM as usize],
         }
     }
 
@@ -47,6 +47,5 @@ impl Memory {
     #[inline]
     pub fn clear(&mut self) {
         self.data = [0; constants::SYSTEM_RAM as usize];
-        // self.data = Box::new([0; constants::SYSTEM_RAM as usize]);
     }
 }

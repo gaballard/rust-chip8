@@ -6,6 +6,7 @@ use crate::constants;
 /// Video Memory
 ///
 #[derive(Debug)]
+#[must_use]
 pub struct VideoMemory {
     pub hires_mode: bool,
     pub data: [[u8; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT],

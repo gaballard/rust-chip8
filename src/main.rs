@@ -9,7 +9,6 @@ use std::time::Duration;
 mod components;
 mod constants;
 mod fonts;
-mod models;
 mod peripherals;
 mod platform;
 mod utils;
@@ -56,7 +55,6 @@ fn main() {
 
     // Emulator timing
     let target_timestep = 1_000 / constants::TARGET_CLOCK_SPEED as u32;
-    let mut frame_count: u32 = 0;
 
     let frame_timer = platform
         .get_sdl_context()
@@ -79,13 +77,13 @@ fn main() {
             EmulatorState::DebugMode => debug_mode = !debug_mode,
             EmulatorState::Step => should_execute = true,
         }
-        keypad.read_keypad(&mut cpu.keys);
+        keypad.read_keypad(cpu.keys.get_buffer());
 
         if debug_mode {
             if !should_execute {
                 continue;
             }
-            debug!("Executing frame {}...", frame_count);
+            debug!("Executing frame {}...", cpu.cycle);
         }
 
         cpu.tick();
@@ -103,8 +101,6 @@ fn main() {
         if cpu.vram_changed {
             display.draw(&cpu.vram);
         }
-
-        frame_count = frame_count.wrapping_add(1);
 
         let dt = frame_timer.ticks() - prev_frame_tick;
         if dt < target_timestep {
