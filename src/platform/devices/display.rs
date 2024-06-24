@@ -1,4 +1,3 @@
-use egui_sdl2_platform::sdl2;
 use sdl2::pixels::Color;
 use sdl2::render::TextureCreator;
 use sdl2::ttf::Font;
@@ -41,6 +40,11 @@ impl<'a> Display<'a> {
             .position_centered()
             .build()
             .expect("SDL2 failed to create window in Gpu::new");
+
+        // let mut event_pump = platform
+        //     .get_sdl_context()
+        //     .event_pump()
+        //     .map_err(|e| format!("Failed to get SDL event pump: {}", e));
 
         let mut canvas = window
             .into_canvas()

@@ -1,4 +1,3 @@
-use egui_sdl2_platform::sdl2;
 use sdl2::ttf::Sdl2TtfContext;
 
 pub struct Platform {

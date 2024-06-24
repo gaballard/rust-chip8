@@ -3,16 +3,17 @@ mod program_counter;
 mod registers;
 mod stack;
 
-use input_buffer::InputBuffer;
 use log::debug;
-use program_counter::ProgramCounter;
 use rand::{rngs::ThreadRng, Rng};
+
+use input_buffer::InputBuffer;
+use program_counter::ProgramCounter;
 use registers::Registers;
 use stack::Stack;
 
-use super::{Memory, VideoMemory};
-
-use crate::{constants, fonts::CHIP8_FONTS, utils::read_bit_from_byte};
+use crate::{
+    chip8::Memory, chip8::VideoMemory, constants, fonts::CHIP8_FONTS, utils::read_bit_from_byte,
+};
 
 pub type Opcode = (u8, u8, u8, u8);
 
