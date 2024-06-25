@@ -13,15 +13,17 @@ pub struct VideoMemory {
     sprites: HashMap<(u16, u8, u8), (usize, usize)>,
 }
 
-impl VideoMemory {
-    pub fn new() -> Self {
+impl Default for VideoMemory {
+    fn default() -> Self {
         Self {
             hires_mode: false,
             data: [[0; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT],
-            sprites: HashMap::new(),
+            sprites: HashMap::default(),
         }
     }
+}
 
+impl VideoMemory {
     pub fn read(&self, x: usize, y: usize) -> &u8 {
         &self.data[y][x]
     }

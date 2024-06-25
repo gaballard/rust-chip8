@@ -6,14 +6,15 @@ pub struct InputBuffer {
     buffer: [bool; 16],
 }
 
-impl InputBuffer {
-    #[inline]
-    pub fn new() -> Self {
+impl Default for InputBuffer {
+    fn default() -> Self {
         Self {
             buffer: [false; 16],
         }
     }
+}
 
+impl InputBuffer {
     #[inline]
     pub fn get_key(&self, key: usize) -> &bool {
         &self.buffer[key]

@@ -10,10 +10,12 @@ use rand::{rngs::ThreadRng, Rng};
 use registers::Registers;
 use stack::Stack;
 
-use super::{Memory, VideoMemory};
+use super::{Memory, Storage, VideoMemory};
+use crate::{constants, fonts::CHIP8_FONTS, utils::read_bit_from_byte, EmulatorConfig};
 
-use crate::{constants, fonts::CHIP8_FONTS, utils::read_bit_from_byte};
-
+///
+/// Opcode
+///
 pub type Opcode = (u8, u8, u8, u8);
 
 ///
@@ -41,23 +43,23 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new(schip_mode: bool) -> Self {
+    pub fn new(emulator_config: &EmulatorConfig) -> Self {
         let mut cpu = Self {
             quit_flag: false,
-            schip_mode,
+            schip_mode: emulator_config.schip_mode,
             hires_mode: false,
             cycle: 0,
-            ram: Memory::new(),
-            vram: VideoMemory::new(),
+            ram: Memory::default(),
+            vram: VideoMemory::default(),
             vram_changed: false,
-            v: Registers::new(),
+            v: Registers::default(),
             i: 0,
-            pc: ProgramCounter::new(),
-            stack: Stack::new(),
+            pc: ProgramCounter::default(),
+            stack: Stack::default(),
             rng: rand::thread_rng(),
             delay_timer: 0,
             sound_timer: 0,
-            keys: InputBuffer::new(),
+            keys: InputBuffer::default(),
             key_register: 0,
             waiting_for_key: false,
         };

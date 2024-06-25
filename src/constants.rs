@@ -19,6 +19,7 @@ pub const BEEP_FREQ_HZ: i32 = 440 * 8;
 
 // CPU
 pub const SCHIP_MODE: bool = false;
+pub const QUIRKS_MODE: bool = false;
 pub const TARGET_CLOCK_SPEED: usize = 120;
 pub const SYSTEM_RAM: u16 = 4096;
 pub const OPCODE_SIZE: u16 = 2;

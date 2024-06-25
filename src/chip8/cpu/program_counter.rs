@@ -5,20 +5,25 @@ use crate::constants;
 ///
 #[derive(Debug)]
 pub struct ProgramCounter {
+    program_start_addr: u16,
+    opcode_size: u16,
     pub address: u16,
+}
+
+impl Default for ProgramCounter {
+    fn default() -> Self {
+        Self {
+            program_start_addr: constants::PROGRAM_START_ADDR,
+            opcode_size: constants::OPCODE_SIZE,
+            address: constants::PROGRAM_START_ADDR,
+        }
+    }
 }
 
 impl ProgramCounter {
     #[inline]
-    pub const fn new() -> Self {
-        ProgramCounter {
-            address: constants::PROGRAM_START_ADDR,
-        }
-    }
-
-    #[inline]
     pub fn next(&mut self) {
-        self.address += constants::OPCODE_SIZE;
+        self.address += self.opcode_size;
     }
 
     #[inline]
@@ -28,6 +33,6 @@ impl ProgramCounter {
 
     #[inline]
     pub fn reset(&mut self) {
-        self.address = constants::PROGRAM_START_ADDR;
+        self.address = self.program_start_addr;
     }
 }

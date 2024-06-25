@@ -21,6 +21,14 @@ $ cargo build
 $ ./target/debug/rust-chip8 ROM_FILENAME
 ```
 
+## Keyboard Shortcuts
+
+| Key | Action                                   |
+| --- | ---------------------------------------- |
+| T   | Suspend execution                        |
+| .   | Step through next cycle (when suspended) |
+| Esc | Quit the emulator                        |
+
 ## Logging
 
 Set the `RUST_LOG` env var to `debug` to see log messages in the console.

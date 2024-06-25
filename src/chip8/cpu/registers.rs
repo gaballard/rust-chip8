@@ -3,17 +3,16 @@
 ///
 #[derive(Debug)]
 pub struct Registers {
-    data: Box<[u8; 16]>,
+    data: [u8; 16],
+}
+
+impl Default for Registers {
+    fn default() -> Self {
+        Self { data: [0; 16] }
+    }
 }
 
 impl Registers {
-    #[inline]
-    pub fn new() -> Self {
-        Registers {
-            data: Box::new([0; 16]),
-        }
-    }
-
     #[inline]
     pub fn read(&self, register: u8) -> &u8 {
         &self.data[register as usize]
@@ -26,6 +25,6 @@ impl Registers {
 
     #[inline]
     pub fn clear(&mut self) {
-        self.data = Box::new([0; 16]);
+        self.data = [0; 16];
     }
 }

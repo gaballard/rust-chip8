@@ -1,4 +1,5 @@
 mod chip8;
+mod config;
 mod constants;
 mod fonts;
 mod platform;
@@ -12,6 +13,7 @@ use std::env;
 use std::time::Duration;
 
 use chip8::Cpu;
+pub use config::{EmulatorConfig, RendererConfig};
 use platform::{Audio, Display, Keypad, Platform, Tape};
 
 ///
@@ -37,6 +39,7 @@ fn main() {
 
     // Emulator settings
     let mut debug_mode = false;
+    let emulator_config = EmulatorConfig::default();
 
     // Set up SDL context
     let platform = Platform::new();
@@ -45,7 +48,7 @@ fn main() {
     let mut display = Display::new(&platform);
     let audio = Audio::new(&platform.get_sdl_context());
     let mut keypad = Keypad::new(&platform.get_sdl_context());
-    let mut cpu = Cpu::new(constants::SCHIP_MODE);
+    let mut cpu = Cpu::new(&emulator_config);
 
     tape.read(cartridge_filename);
 

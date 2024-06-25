@@ -1,5 +1,7 @@
 use crate::constants;
 
+use super::Storage;
+
 ///
 /// Memory
 ///
@@ -9,43 +11,34 @@ pub struct Memory {
     data: [u8; constants::SYSTEM_RAM as usize],
 }
 
-impl Memory {
-    pub fn new() -> Self {
-        Memory {
-            data: [0; constants::SYSTEM_RAM as usize],
-        }
-    }
-
+impl Storage for Memory {
     #[inline]
-    pub fn read(&self, addr: u16) -> &u8 {
+    fn read(&self, addr: u16) -> &u8 {
         &self.data[addr as usize]
     }
 
     #[inline]
-    pub fn read_slice(&self, addr: u16, len: u16) -> &[u8] {
-        &self.data[addr as usize..(addr + len) as usize]
-    }
-
-    #[allow(dead_code)]
-    pub fn read_bit_from_byte(&self, byte: &u8, bit_position: u8) -> &u8 {
-        if bit_position < 8 {
-            if byte & (1 << bit_position) != 0 {
-                &1
-            } else {
-                &0
-            }
-        } else {
-            &0
-        }
-    }
-
-    #[inline]
-    pub fn write(&mut self, addr: u16, value: u8) {
+    fn write(&mut self, addr: u16, value: u8) {
         self.data[addr as usize] = value;
     }
 
     #[inline]
-    pub fn clear(&mut self) {
+    fn clear(&mut self) {
         self.data = [0; constants::SYSTEM_RAM as usize];
+    }
+}
+
+impl Default for Memory {
+    fn default() -> Self {
+        Self {
+            data: [0; constants::SYSTEM_RAM as usize],
+        }
+    }
+}
+
+impl Memory {
+    #[inline]
+    pub fn read_slice(&self, addr: u16, len: u16) -> &[u8] {
+        &self.data[addr as usize..(addr + len) as usize]
     }
 }

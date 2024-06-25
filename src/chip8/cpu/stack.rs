@@ -7,15 +7,16 @@ pub struct Stack {
     pointer: u8,
 }
 
-impl Stack {
-    #[inline]
-    pub fn new() -> Self {
+impl Default for Stack {
+    fn default() -> Self {
         Self {
             data: [0; 16],
             pointer: 0,
         }
     }
+}
 
+impl Stack {
     #[inline]
     pub fn push(&mut self, value: u16) {
         self.pointer += 1;
