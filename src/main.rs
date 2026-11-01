@@ -4,7 +4,6 @@ mod fonts;
 mod platform;
 mod utils;
 
-use dotenv::dotenv;
 use env_logger;
 use log::debug;
 
@@ -23,36 +22,54 @@ pub enum EmulatorState {
     Running,
     DebugMode,
     Step,
+    ToggleCrtFade,
 }
 
+///
+/// Emulator Settings
+///
+pub struct EmulatorSettings {
+    pub crt_fade: bool,
+    pub debug_mode: bool,
+    pub hires_mode: bool,
+    pub schip_mode: bool,
+}
+
+///
+/// Main
+///
 fn main() {
     env_logger::try_init().expect("Couldn't load env_logger");
-    dotenv().expect("Couldn't load settings from `.env` file");
 
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         panic!("Must include path to ROM file!");
     }
-    let cartridge_filename = &args[1];
 
     // Emulator settings
-    let mut debug_mode = false;
+    let mut settings = EmulatorSettings {
+        crt_fade: true,
+        debug_mode: false,
+        hires_mode: true,
+        schip_mode: constants::SCHIP_MODE,
+    };
 
     // Set up SDL context
     let platform = Platform::new();
 
+    // Init hardware
     let mut tape = Tape::new();
     let mut display = Display::new(&platform);
     let audio = Audio::new(&platform.get_sdl_context());
     let mut keypad = Keypad::new(&platform.get_sdl_context());
-    let mut cpu = Cpu::new(constants::SCHIP_MODE);
+    let mut cpu = Cpu::new(settings.schip_mode);
 
+    let cartridge_filename = &args[1];
     tape.read(cartridge_filename);
-
     cpu.load_program(tape.rom);
 
     // Emulator timing
-    let target_timestep = 1_000 / constants::TARGET_CLOCK_SPEED as u32;
+    let emulator_timestep = 1_000 / constants::TARGET_CLOCK_SPEED;
 
     let frame_timer = platform
         .get_sdl_context()
@@ -60,25 +77,30 @@ fn main() {
         .expect("FPS delay timer failed to initialize in main");
 
     let mut prev_frame_tick: u32;
+    let mut should_execute: bool;
+
+    println!("Running program...");
 
     // Main loop
     'emulate: loop {
         prev_frame_tick = frame_timer.ticks();
 
-        let mut should_execute = false;
+        should_execute = false;
 
         // Check inputs
         match keypad.read_host_keypad() {
             EmulatorState::Quit => break 'emulate,
             EmulatorState::Reset => cpu.reset(),
             EmulatorState::Running => {}
-            EmulatorState::DebugMode => debug_mode = !debug_mode,
+            EmulatorState::DebugMode => settings.debug_mode = !settings.debug_mode,
             EmulatorState::Step => should_execute = true,
+            EmulatorState::ToggleCrtFade => settings.crt_fade = !settings.crt_fade,
         }
         keypad.read_keypad(cpu.keys.get_buffer());
 
-        if debug_mode {
+        if settings.debug_mode {
             if !should_execute {
+                display.update(&mut cpu.vram, settings.crt_fade);
                 continue;
             }
             debug!("Executing frame {}...", cpu.cycle);
@@ -96,15 +118,13 @@ fn main() {
             audio.stop_beep()
         }
 
-        if cpu.vram_changed {
-            display.draw(&cpu.vram);
-        }
+        display.update(&mut cpu.vram, settings.crt_fade);
 
         let dt = frame_timer.ticks() - prev_frame_tick;
-        if dt < target_timestep {
-            std::thread::sleep(Duration::from_millis((target_timestep - dt).into()));
+        if dt < emulator_timestep {
+            std::thread::sleep(Duration::from_millis((emulator_timestep - dt).into()));
         }
     }
 
-    debug!("Exiting emulator...");
+    println!("Thanks for playing!");
 }
