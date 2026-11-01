@@ -1,5 +1,5 @@
 extern crate sdl2;
-use std::{fs, time::Duration};
+use std::{fs, process, time::Duration};
 
 use crate::constants;
 
@@ -24,8 +24,14 @@ impl Tape {
     }
 
     pub fn read(&mut self, filename: &String) {
-        let program_data = fs::read(format!("{}/{}", constants::ROM_FOLDER, filename).as_str())
-            .unwrap_or(Vec::new());
+        let path = format!("{}", filename);
+
+        println!("Loading ROM at path \"{}\"...", path.as_str());
+
+        let program_data = fs::read(path.as_str()).unwrap_or_else(|err| {
+            println!("Error reading ROM \"{}\": {err}", path.as_str());
+            process::exit(1);
+        });
         let size = program_data.len();
         if size >= constants::MAX_ROM_SIZE as usize {
             panic!(
@@ -42,5 +48,7 @@ impl Tape {
 
         self.size = size;
         self.rom = program_data;
+
+        println!("Done! Loaded {}B ({}KB) into memory", size, size / 8);
     }
 }

@@ -25,11 +25,8 @@ pub struct Cpu {
     pub schip_mode: bool,
     pub hires_mode: bool,
     pub cycle: usize,
-    ram: Memory,
-    pub vram: VideoMemory,
-    pub vram_changed: bool,
-    v: Registers,
-    i: u16,
+    pub v: Registers,
+    pub i: u16,
     pc: ProgramCounter,
     stack: Stack,
     delay_timer: u8,
@@ -38,6 +35,8 @@ pub struct Cpu {
     pub keys: InputBuffer,
     key_register: u8,
     waiting_for_key: bool,
+    pub ram: Memory,
+    pub vram: VideoMemory,
 }
 
 impl Cpu {
@@ -47,9 +46,6 @@ impl Cpu {
             schip_mode,
             hires_mode: false,
             cycle: 0,
-            ram: Memory::new(),
-            vram: VideoMemory::new(),
-            vram_changed: false,
             v: Registers::new(),
             i: 0,
             pc: ProgramCounter::new(),
@@ -60,6 +56,8 @@ impl Cpu {
             keys: InputBuffer::new(),
             key_register: 0,
             waiting_for_key: false,
+            ram: Memory::new(),
+            vram: VideoMemory::new(),
         };
 
         let mut i = constants::FONT_START_ADDR;
@@ -97,7 +95,7 @@ impl Cpu {
     pub fn tick(&mut self) {
         self.cycle = self.cycle.wrapping_add(1);
 
-        self.vram_changed = false;
+        // self.vram_changed = false;
 
         if self.waiting_for_key {
             for key in 0..15 as usize {
@@ -216,7 +214,6 @@ impl Cpu {
     pub fn cls(&mut self) {
         debug!("00E0 - CLS");
         self.vram.clear();
-        self.vram_changed = true;
     }
 
     ///
@@ -561,26 +558,6 @@ impl Cpu {
 
         let sprite_data = self.ram.read_slice(self.i, sprite_len.try_into().unwrap());
 
-        // if self.i >= constants::PROGRAM_START_ADDR {
-        //     let sprite = self.vram.read_sprite((self.i, vx, vy));
-        //     match sprite {
-        //         Some(coords) => {
-        //             for sy in 0..sprite_len {
-        //                 let vy = (coords.1 + sy as usize) % self.vram.get_screen_height();
-        //                 for sx in 0..8 as u8 {
-        //                     let vx = (coords.0 + sx as usize) % self.vram.get_screen_width();
-        //                     let bit = read_bit_from_byte(&sprite_data[sy as usize], 7 - sx as u8);
-
-        //                     // if *bit == 1 {
-        //                         self.vram.write(vx, vy, self.vram.read(vx, vy) ^ bit);
-        //                     // }
-        //                 }
-        //             }
-        //         }
-        //         None => {}
-        //     }
-        // }
-
         let mut collisions: u8 = 0;
 
         self.v.write(0xF, 0);
@@ -590,31 +567,30 @@ impl Cpu {
             for sx in 0..8 as u8 {
                 let vx = (x + sx as usize) % self.vram.get_screen_width();
 
-                let pixel = read_bit_from_byte(&sprite_data[sy as usize], 7 - sx as u8);
+                let pixel = read_bit_from_byte(sprite_data[sy as usize], 7 - sx as u8);
 
-                if *pixel == 0 {
-                    continue;
-                }
+                // if pixel == 0 {
+                //     continue;
+                // }
 
                 if self.vram.read(vx, vy) & pixel == 1 {
-                    if self.schip_mode {
-                        collisions += 1;
-                    } else {
-                        self.v.write(0xF, self.v.read(0xF) | 1)
-                    };
+                    collisions += 1;
                 }
 
                 self.vram.write(vx, vy, self.vram.read(vx, vy) ^ pixel);
             }
         }
 
-        if self.schip_mode && collisions > 0 {
-            self.v.write(0xF, collisions);
+        if collisions > 0 {
+            self.v.write(
+                0xF,
+                if self.schip_mode {
+                    collisions
+                } else {
+                    self.v.read(0xF) | 1
+                },
+            );
         }
-
-        // self.vram.write_sprite((self.i, vx, vy), x, y);
-
-        self.vram_changed = true;
     }
 
     ///
@@ -810,8 +786,8 @@ impl Cpu {
     ///
     pub fn no_op(&self, opcode: Opcode) {
         debug!(
-            "Invalid opcode at address {}: {:?}",
-            self.pc.address, opcode
+            "Unknown or invalid opcode \"{:?}\" at address 0x{}",
+            opcode, self.pc.address
         );
     }
 }

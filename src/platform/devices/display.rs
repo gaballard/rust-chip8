@@ -1,3 +1,5 @@
+use std::ops::Mul;
+
 use sdl2::pixels::Color;
 use sdl2::render::TextureCreator;
 use sdl2::ttf::Font;
@@ -18,6 +20,7 @@ pub struct Display<'a> {
     pub display_scale_factor: usize,
     pub foreground_color: Color,
     pub background_color: Color,
+    pub fading_pixels: Vec<(usize, usize, u8)>,
 }
 
 impl<'a> Display<'a> {
@@ -65,6 +68,7 @@ impl<'a> Display<'a> {
             display_scale_factor,
             background_color,
             foreground_color,
+            fading_pixels: Vec::new(),
         }
     }
 
@@ -91,10 +95,25 @@ impl<'a> Display<'a> {
             .expect("Error rendering texture");
     }
 
+    pub fn update(&mut self, vram: &mut VideoMemory, crt_fade: bool) {
+        if vram.vram_changed {
+            self.draw(vram);
+
+            if crt_fade {
+                self.fade_pixels();
+            }
+
+            self.canvas.present();
+
+            vram.vram_changed = false;
+        }
+    }
+
     pub fn draw(&mut self, vram: &VideoMemory) {
         for y in 0..vram.get_screen_height() {
             for x in 0..vram.get_screen_width() {
                 self.canvas.set_draw_color(if *vram.read(x, y) == 1 {
+                    self.fading_pixels.push((x, y, 100));
                     self.foreground_color
                 } else {
                     self.background_color
@@ -110,7 +129,45 @@ impl<'a> Display<'a> {
                     .expect(format!("Failed to draw pixel at {},{}", x, y).as_str());
             }
         }
+    }
 
-        self.canvas.present();
+    pub fn fade_pixels(&mut self) -> usize {
+        let mut to_retain: Vec<bool> = Vec::new();
+
+        for i in 0..self.fading_pixels.len() {
+            let mut pixel = self.fading_pixels[i];
+
+            let mut draw_color = self.foreground_color;
+            let fade_mult = (pixel.2 as f32) / 100 as f32;
+            draw_color.r = (draw_color.r as f32).mul(fade_mult) as u8;
+            draw_color.g = (draw_color.g as f32).mul(fade_mult) as u8;
+            draw_color.b = (draw_color.b as f32).mul(fade_mult) as u8;
+            self.canvas.set_draw_color(draw_color);
+
+            self.canvas
+                .fill_rect(Rect::new(
+                    (pixel.0 * self.display_scale_factor as usize) as i32,
+                    (pixel.1 * self.display_scale_factor as usize) as i32,
+                    self.display_scale_factor as u32,
+                    self.display_scale_factor as u32,
+                ))
+                .expect(format!("Failed to fade pixel at {},{}", pixel.0, pixel.1).as_str());
+
+            pixel.2 = pixel.2.checked_sub(constants::PIXEL_FADE_RATE).unwrap_or(0);
+
+            if pixel.2 == 0 {
+                to_retain.push(false);
+            } else {
+                to_retain.push(true);
+                self.fading_pixels[i] = pixel;
+            }
+        }
+
+        if to_retain.len() > 0 {
+            let mut iter = to_retain.iter();
+            self.fading_pixels.retain(|_| *iter.next().unwrap());
+        }
+
+        self.fading_pixels.len()
     }
 }

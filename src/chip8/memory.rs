@@ -26,19 +26,6 @@ impl Memory {
         &self.data[addr as usize..(addr + len) as usize]
     }
 
-    #[allow(dead_code)]
-    pub fn read_bit_from_byte(&self, byte: &u8, bit_position: u8) -> &u8 {
-        if bit_position < 8 {
-            if byte & (1 << bit_position) != 0 {
-                &1
-            } else {
-                &0
-            }
-        } else {
-            &0
-        }
-    }
-
     #[inline]
     pub fn write(&mut self, addr: u16, value: u8) {
         self.data[addr as usize] = value;

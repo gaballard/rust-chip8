@@ -4,15 +4,15 @@ use std::{convert::TryInto, fmt::Debug};
 /// Returns an individual bit from a given byte
 ///
 #[inline]
-pub fn read_bit_from_byte(byte: &u8, bit_position: u8) -> &u8 {
+pub fn read_bit_from_byte(byte: u8, bit_position: u8) -> u8 {
     if bit_position < 8 {
         if byte & (1 << bit_position) != 0 {
-            &1
+            1
         } else {
-            &0
+            0
         }
     } else {
-        &0
+        0
     }
 }
 

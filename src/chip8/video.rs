@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::constants;
 
 ///
@@ -9,16 +7,16 @@ use crate::constants;
 #[must_use]
 pub struct VideoMemory {
     pub hires_mode: bool,
+    pub vram_changed: bool,
     pub data: [[u8; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT],
-    sprites: HashMap<(u16, u8, u8), (usize, usize)>,
 }
 
 impl VideoMemory {
     pub fn new() -> Self {
         Self {
             hires_mode: false,
+            vram_changed: false,
             data: [[0; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT],
-            sprites: HashMap::new(),
         }
     }
 
@@ -28,19 +26,12 @@ impl VideoMemory {
 
     pub fn write(&mut self, x: usize, y: usize, value: u8) {
         self.data[y][x] = value;
-    }
-
-    pub fn _read_sprite(&self, key: (u16, u8, u8)) -> Option<(usize, usize)> {
-        self.sprites.get(&key).copied()
-    }
-
-    pub fn _write_sprite(&mut self, key: (u16, u8, u8), x: usize, y: usize) {
-        self.sprites.insert(key, (x, y));
+        self.vram_changed = true;
     }
 
     pub fn clear(&mut self) {
         self.data = [[0; constants::SCREEN_WIDTH]; constants::SCREEN_HEIGHT];
-        self.sprites = HashMap::new();
+        self.vram_changed = true;
     }
 
     pub fn get_screen_width(&self) -> usize {

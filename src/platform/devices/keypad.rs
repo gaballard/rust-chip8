@@ -80,6 +80,12 @@ impl Keypad {
                     ..
                 } => return EmulatorState::Step,
 
+                // Toggle CRT fade effect
+                Event::KeyDown {
+                    keycode: Some(Keycode::J),
+                    ..
+                } => return EmulatorState::ToggleCrtFade,
+
                 // Continue
                 _ => return EmulatorState::Running,
             }
