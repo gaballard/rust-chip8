@@ -12,7 +12,7 @@ use stack::Stack;
 
 use super::{Memory, VideoMemory};
 
-use crate::{constants, fonts::CHIP8_FONTS, utils::read_bit_from_byte};
+use crate::{chip8::sprite::SpriteKey, constants, fonts::CHIP8_FONTS};
 
 pub type Opcode = (u8, u8, u8, u8);
 
@@ -553,33 +553,20 @@ impl Cpu {
             vx, vy, sprite_len, vx, vy, sprite_len
         );
 
+        let sprite_key: SpriteKey = SpriteKey(vx, vy, self.i, self.i + sprite_len as u16);
+        let sprite_data = self.ram.read_slice(self.i, sprite_len as u16);
+
+        if !self.vram.has_sprite(&sprite_key) {
+            self.vram.add_sprite(&sprite_key, sprite_data, sprite_len);
+        }
+
         let x = *self.v.read(vx) as usize % self.vram.get_screen_width();
         let y = *self.v.read(vy) as usize % self.vram.get_screen_height();
 
-        let sprite_data = self.ram.read_slice(self.i, sprite_len.try_into().unwrap());
-
-        let mut collisions: u8 = 0;
+        self.vram.place_sprite(&sprite_key, x, y);
+        let collisions = self.vram.draw_sprite(&sprite_key);
 
         self.v.write(0xF, 0);
-
-        for sy in 0..sprite_len {
-            let vy = (y + sy as usize) % self.vram.get_screen_height();
-            for sx in 0..8 as u8 {
-                let vx = (x + sx as usize) % self.vram.get_screen_width();
-
-                let pixel = read_bit_from_byte(sprite_data[sy as usize], 7 - sx as u8);
-
-                // if pixel == 0 {
-                //     continue;
-                // }
-
-                if self.vram.read(vx, vy) & pixel == 1 {
-                    collisions += 1;
-                }
-
-                self.vram.write(vx, vy, self.vram.read(vx, vy) ^ pixel);
-            }
-        }
 
         if collisions > 0 {
             self.v.write(
@@ -590,6 +577,7 @@ impl Cpu {
                     self.v.read(0xF) | 1
                 },
             );
+            self.vram.clear_collisions();
         }
     }
 

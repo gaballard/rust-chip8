@@ -108,7 +108,7 @@ fn main() {
 
         cpu.tick();
 
-        if cpu.schip_mode && cpu.quit_flag {
+        if settings.schip_mode && cpu.quit_flag {
             break 'emulate;
         }
 
