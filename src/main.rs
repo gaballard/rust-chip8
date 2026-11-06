@@ -87,6 +87,10 @@ fn main() {
 
         should_execute = false;
 
+        display.canvas.clear();
+        display.canvas.set_draw_color(display.background_color);
+        cpu.vram.vram_changed = false;
+
         // Check inputs
         match keypad.read_host_keypad() {
             EmulatorState::Quit => break 'emulate,
