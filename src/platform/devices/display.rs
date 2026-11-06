@@ -1,33 +1,31 @@
+mod debug_panel;
+
 use std::ops::Mul;
 
 use sdl2::pixels::Color;
-use sdl2::render::TextureCreator;
 use sdl2::ttf::Font;
-use sdl2::video::WindowContext;
 use sdl2::{rect::Rect, render::Canvas, video::Window};
 
 use crate::chip8::VideoMemory;
 use crate::constants;
+use crate::platform::devices::display::debug_panel::DebugPanel;
 use crate::platform::Platform;
 
 ///
 /// Display
 ///
 pub struct Display<'a> {
-    pub canvas: Canvas<Window>,
-    pub _font: Font<'a, 'static>,
-    _texture_creator: TextureCreator<WindowContext>,
-    pub display_scale_factor: usize,
+    canvas: Canvas<Window>,
+    pub video_scale: u32,
     pub foreground_color: Color,
     pub background_color: Color,
     pub fading_pixels: Vec<(usize, usize, u8)>,
+    pub debug_panel: DebugPanel<'a>,
 }
 
 impl<'a> Display<'a> {
-    pub fn new(platform: &'a Platform) -> Self {
-        let display_scale_factor = constants::VIDEO_SCALE;
-        let background_color = constants::BACKGROUND_COLOR;
-        let foreground_color = constants::FOREGROUND_COLOR;
+    pub fn new(platform: &'a Platform, font: &'a Font<'a, 'static>, color_palette: usize) -> Self {
+        let video_scale = constants::VIDEO_SCALE;
 
         let video_subsystem = platform
             .get_sdl_context()
@@ -37,65 +35,57 @@ impl<'a> Display<'a> {
         let window = video_subsystem
             .window(
                 &constants::EMULATOR_NAME,
-                (constants::SCREEN_WIDTH * display_scale_factor) as u32,
-                (constants::SCREEN_HEIGHT * display_scale_factor) as u32,
+                constants::SCREEN_WIDTH as u32 * video_scale,
+                constants::SCREEN_HEIGHT as u32 * video_scale,
             )
             .position_centered()
             .build()
             .expect("SDL2 failed to create window in Gpu::new");
 
-        let mut canvas = window
+        let canvas = window
             .into_canvas()
             .build()
             .expect("SDL2 failed to initialize window canvas in Gpu::new");
 
-        let _font = platform
-            .get_ttf_context()
-            .load_font("./fonts/SperryPC_CGA.ttf", 16)
-            .expect("Font does not exist");
+        let debug_panel = DebugPanel::new(
+            // &video_subsystem,
+            platform,
+            canvas.window().position().0 + (constants::SCREEN_WIDTH as u32 * video_scale) as i32,
+            canvas.window().position().1,
+            16,
+            constants::SCREEN_HEIGHT as u32,
+            6,
+            color_palette,
+            video_scale,
+            font,
+        );
 
-        let _texture_creator = canvas.texture_creator();
-
-        // Reset display
-        canvas.set_draw_color(background_color);
-        canvas.clear();
-        canvas.present();
+        let colors = constants::PALETTE_COLORS[color_palette];
+        let foreground_color = colors.0;
+        let background_color = colors.1;
 
         Display {
             canvas,
-            _font,
-            _texture_creator,
-            display_scale_factor,
+            video_scale,
             background_color,
             foreground_color,
             fading_pixels: Vec::new(),
+            debug_panel,
         }
     }
 
-    pub fn _draw_text(&mut self, text: &str, x: usize, y: usize) {
-        let surface = self
-            ._font
-            .render(text)
-            .solid(self.foreground_color)
-            .expect("Error drawing text");
-
-        let texture = self
-            ._texture_creator
-            .create_texture_from_surface(surface)
-            .expect("Failed to create texture from font surface");
-
-        let query = texture.query();
-        let text_width = query.width;
-        let text_height = query.height;
-
-        let rect = Rect::new(x as i32, y as i32, text_width, text_height);
-
-        self.canvas
-            .copy(&texture, None, Some(rect))
-            .expect("Error rendering texture");
+    pub fn reset(&mut self) {
+        self.canvas.set_draw_color(self.background_color);
+        self.canvas.clear();
     }
 
-    pub fn update(&mut self, vram: &mut VideoMemory, crt_fade: bool) {
+    pub fn set_color_palette(&mut self, color_palette: usize) {
+        let colors = constants::PALETTE_COLORS[color_palette];
+        self.foreground_color = colors.0;
+        self.background_color = colors.1;
+    }
+
+    pub fn update(&mut self, vram: &mut VideoMemory, crt_fade: bool, crt_fade_rate: u8) {
         if crt_fade {
             if self.fading_pixels.len() > 0 {
                 vram.vram_changed = true;
@@ -108,14 +98,14 @@ impl<'a> Display<'a> {
             self.draw(vram);
 
             if crt_fade {
-                self.fade_pixels();
+                self.fade_pixels(crt_fade_rate);
             }
 
             self.canvas.present();
         }
     }
 
-    pub fn draw(&mut self, vram: &VideoMemory) {
+    fn draw(&mut self, vram: &VideoMemory) {
         for y in 0..vram.get_screen_height() {
             for x in 0..vram.get_screen_width() {
                 self.canvas.set_draw_color(if *vram.read(x, y) == 1 {
@@ -127,17 +117,17 @@ impl<'a> Display<'a> {
 
                 self.canvas
                     .fill_rect(Rect::new(
-                        (x * self.display_scale_factor as usize) as i32,
-                        (y * self.display_scale_factor as usize) as i32,
-                        self.display_scale_factor as u32,
-                        self.display_scale_factor as u32,
+                        (x * self.video_scale as usize) as i32,
+                        (y * self.video_scale as usize) as i32,
+                        self.video_scale as u32,
+                        self.video_scale as u32,
                     ))
                     .expect(format!("Failed to draw pixel at {},{}", x, y).as_str());
             }
         }
     }
 
-    pub fn fade_pixels(&mut self) -> usize {
+    fn fade_pixels(&mut self, crt_fade_rate: u8) -> usize {
         let mut to_retain: Vec<bool> = Vec::new();
 
         for i in 0..self.fading_pixels.len() {
@@ -159,14 +149,14 @@ impl<'a> Display<'a> {
 
             self.canvas
                 .fill_rect(Rect::new(
-                    (pixel.0 * self.display_scale_factor as usize) as i32,
-                    (pixel.1 * self.display_scale_factor as usize) as i32,
-                    self.display_scale_factor as u32,
-                    self.display_scale_factor as u32,
+                    (pixel.0 * self.video_scale as usize) as i32,
+                    (pixel.1 * self.video_scale as usize) as i32,
+                    self.video_scale as u32,
+                    self.video_scale as u32,
                 ))
                 .expect(format!("Failed to fade pixel at {},{}", pixel.0, pixel.1).as_str());
 
-            pixel.2 = pixel.2.checked_sub(constants::PIXEL_FADE_RATE).unwrap_or(0);
+            pixel.2 = pixel.2.checked_sub(crt_fade_rate).unwrap_or(0);
 
             if pixel.2 == 0 {
                 to_retain.push(false);

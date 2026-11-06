@@ -83,19 +83,21 @@ impl Cpu {
     }
 
     #[inline]
-    pub fn load_program(&mut self, data: Vec<u8>) {
+    pub fn get_pc(&self) -> &ProgramCounter {
+        &self.pc
+    }
+
+    #[inline]
+    pub fn load_program(&mut self, data: &Vec<u8>) {
         let mut address = constants::PROGRAM_START_ADDR;
-        for v in &data {
+        for v in data {
             self.ram.write(address, *v);
             address += 1;
         }
     }
 
-    #[inline]
     pub fn tick(&mut self) {
         self.cycle = self.cycle.wrapping_add(1);
-
-        // self.vram_changed = false;
 
         if self.waiting_for_key {
             for key in 0..15 as usize {
