@@ -10,9 +10,12 @@ pub const _HIRES_SCREEN_HEIGHT: usize = 64;
 pub const SCREEN_WIDTH: usize = 64;
 pub const SCREEN_HEIGHT: usize = 32;
 pub const VIDEO_SCALE: usize = 12;
-pub const FOREGROUND_COLOR: Color = Color::RGB(255, 176, 0); // Amber
-pub const BACKGROUND_COLOR: Color = Color::BLACK;
-pub const PIXEL_FADE_RATE: u8 = 20;
+pub const PIXEL_FADE_RATE: u8 = 3;
+
+// Colors
+pub const FOREGROUND_COLOR: Color = Color::RGB(255, 176, 0); // Amber (P3)
+// pub const FOREGROUND_COLOR: Color = Color::RGB(51, 255, 51); // Green (P1)
+pub const BACKGROUND_COLOR: Color = Color::RGB(40, 40, 40);
 
 // Audio
 pub const BEEP_FREQ_HZ: i32 = 440 * 8;

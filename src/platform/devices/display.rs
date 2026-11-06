@@ -96,6 +96,14 @@ impl<'a> Display<'a> {
     }
 
     pub fn update(&mut self, vram: &mut VideoMemory, crt_fade: bool) {
+        if crt_fade {
+            if self.fading_pixels.len() > 0 {
+                vram.vram_changed = true;
+            }
+        } else {
+            self.fading_pixels.clear();
+        }
+
         if vram.vram_changed {
             self.draw(vram);
 
@@ -104,8 +112,6 @@ impl<'a> Display<'a> {
             }
 
             self.canvas.present();
-
-            vram.vram_changed = false;
         }
     }
 
@@ -142,7 +148,14 @@ impl<'a> Display<'a> {
             draw_color.r = (draw_color.r as f32).mul(fade_mult) as u8;
             draw_color.g = (draw_color.g as f32).mul(fade_mult) as u8;
             draw_color.b = (draw_color.b as f32).mul(fade_mult) as u8;
-            self.canvas.set_draw_color(draw_color);
+
+            self.canvas.set_draw_color(
+                if draw_color.r < 40 && draw_color.g < 40 && draw_color.b < 40 {
+                    self.background_color
+                } else {
+                    draw_color
+                },
+            );
 
             self.canvas
                 .fill_rect(Rect::new(
