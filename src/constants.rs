@@ -1,7 +1,7 @@
 use sdl2::pixels::Color;
 
-// Emulator
-pub const EMULATOR_NAME: &str = "Wow! Another CHIP-8 Emulator!";
+// Interpreter
+pub const EMULATOR_NAME: &str = "Wow! Another CHIP-8 Interpreter!";
 pub const MAX_ROM_SIZE: u32 = 3585;
 
 // Display
@@ -16,7 +16,7 @@ pub const PIXEL_FADE_RATE_FAST: u8 = 7;
 
 // Fonts
 pub const FONT_SIZE: u16 = 16;
-pub const FONT_PATH: &str = "./fonts/SperryPC_CGA.ttf";
+pub const FONT_PATH: &str = "./assets/fonts/SperryPC_CGA.ttf";
 
 // Colors
 pub const FOREGROUND_COLOR_AMBER: Color = Color::RGB(255, 176, 0); // Amber (P3)

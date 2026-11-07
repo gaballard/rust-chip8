@@ -5,7 +5,8 @@ use sdl2::keyboard::{KeyboardState, Keycode, Scancode};
 use sdl2::EventPump;
 use sdl2::Sdl;
 
-use crate::{EmulatorActions, PixelFadeRate};
+use crate::chippy::PixelFadeRate;
+use crate::Actions;
 
 ///
 /// Keypad
@@ -47,7 +48,7 @@ impl Keypad {
         keys[0xF] = keypad_state.is_scancode_pressed(Scancode::V);
     }
 
-    pub fn read_host_keypad(&mut self) -> EmulatorActions {
+    pub fn read_host_keypad(&mut self) -> Actions {
         for event in self.event_pump.poll_iter() {
             match event {
                 // Quit
@@ -55,7 +56,7 @@ impl Keypad {
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                } => return EmulatorActions::Quit,
+                } => return Actions::Quit,
 
                 // Reset
                 Event::KeyDown {
@@ -65,57 +66,57 @@ impl Keypad {
                 | Event::KeyDown {
                     keycode: Some(Keycode::Delete),
                     ..
-                } => return EmulatorActions::Reset,
+                } => return Actions::Reset,
 
                 // Toggle debug mode
                 Event::KeyDown {
                     keycode: Some(Keycode::T),
                     ..
-                } => return EmulatorActions::ToggleDebugMode,
+                } => return Actions::ToggleDebugMode,
 
                 Event::KeyDown {
                     keycode: Some(Keycode::Backslash),
                     ..
-                } => return EmulatorActions::ToggleDebugPanel,
+                } => return Actions::ToggleDebugPanel,
 
                 // Step through next instruction (debug mode only)
                 Event::KeyDown {
                     keycode: Some(Keycode::Period),
                     repeat: false,
                     ..
-                } => return EmulatorActions::Step,
+                } => return Actions::Step,
 
                 // Toggle CRT fade effect
                 Event::KeyDown {
                     keycode: Some(Keycode::J),
                     ..
-                } => return EmulatorActions::ToggleCrtFade,
+                } => return Actions::ToggleCrtFade,
 
                 Event::KeyDown {
                     keycode: Some(Keycode::Num7),
                     ..
-                } => return EmulatorActions::SetCrtFadeSpeed(PixelFadeRate::Slow),
+                } => return Actions::SetCrtFadeSpeed(PixelFadeRate::Slow),
 
                 Event::KeyDown {
                     keycode: Some(Keycode::Num8),
                     ..
-                } => return EmulatorActions::SetCrtFadeSpeed(PixelFadeRate::Medium),
+                } => return Actions::SetCrtFadeSpeed(PixelFadeRate::Medium),
 
                 Event::KeyDown {
                     keycode: Some(Keycode::Num9),
                     ..
-                } => return EmulatorActions::SetCrtFadeSpeed(PixelFadeRate::Fast),
+                } => return Actions::SetCrtFadeSpeed(PixelFadeRate::Fast),
 
                 // Switch color palette
                 Event::KeyDown {
                     keycode: Some(Keycode::P),
                     ..
-                } => return EmulatorActions::CycleColorPalette,
+                } => return Actions::CycleColorPalette,
 
                 // Continue
-                _ => return EmulatorActions::Running,
+                _ => return Actions::Running,
             }
         }
-        EmulatorActions::Running
+        Actions::Running
     }
 }

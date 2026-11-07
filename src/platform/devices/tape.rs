@@ -7,7 +7,7 @@ use crate::constants;
 /// Tape
 ///
 pub struct Tape {
-    pub rom: Vec<u8>,
+    pub data: Vec<u8>,
     pub size: usize,
     pub baud: usize,
     pub sim_timing: bool,
@@ -16,7 +16,7 @@ pub struct Tape {
 impl Tape {
     pub fn new() -> Self {
         Tape {
-            rom: Vec::new(),
+            data: Vec::new(),
             size: 0,
             baud: 750,
             sim_timing: false,
@@ -47,7 +47,7 @@ impl Tape {
         }
 
         self.size = size;
-        self.rom = program_data;
+        self.data = program_data;
 
         println!("Done! Loaded {}B ({}KB) into memory", size, size / 8);
     }
