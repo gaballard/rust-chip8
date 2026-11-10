@@ -1,7 +1,7 @@
 [package]
 name = "chippy"
 version = "1.4.0"
-edition = "2021"
+edition = "2024"
 authors = ["Geoffrey Ballard"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

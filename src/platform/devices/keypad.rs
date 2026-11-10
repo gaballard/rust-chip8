@@ -86,6 +86,23 @@ impl Keypad {
                     ..
                 } => return Actions::Step,
 
+                // Set hires mode
+                Event::KeyDown {
+                    keycode: Some(Keycode::H),
+                    ..
+                } => return Actions::ToggleHiresMode,
+
+                // Video scaling
+                Event::KeyDown {
+                    keycode: Some(Keycode::LeftBracket),
+                    ..
+                } => return Actions::DecVideoScale,
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::RightBracket),
+                    ..
+                } => return Actions::IncVideoScale,
+
                 // Toggle CRT fade effect
                 Event::KeyDown {
                     keycode: Some(Keycode::J),

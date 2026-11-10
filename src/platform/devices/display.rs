@@ -8,8 +8,8 @@ use sdl2::{rect::Rect, render::Canvas, video::Window};
 
 use crate::chip8::VideoMemory;
 use crate::constants;
-use crate::platform::devices::display::debug_panel::DebugPanel;
 use crate::platform::Platform;
+use crate::platform::devices::display::debug_panel::DebugPanel;
 
 ///
 /// Display
@@ -24,8 +24,24 @@ pub struct Display<'a> {
 }
 
 impl<'a> Display<'a> {
-    pub fn new(platform: &'a Platform, font: &'a Font<'a, 'static>, color_palette: usize) -> Self {
+    pub fn new(
+        platform: &'a Platform,
+        hires_mode: bool,
+        font: &'a Font<'a, 'static>,
+        color_palette: usize,
+    ) -> Self {
         let video_scale = constants::VIDEO_SCALE;
+        let display_width = if hires_mode {
+            constants::HIRES_SCREEN_WIDTH as u32
+        } else {
+            constants::LORES_SCREEN_WIDTH as u32
+        };
+
+        let display_height = if hires_mode {
+            constants::HIRES_SCREEN_HEIGHT as u32
+        } else {
+            constants::LORES_SCREEN_HEIGHT as u32
+        };
 
         let video_subsystem = platform
             .get_sdl_context()
@@ -35,8 +51,8 @@ impl<'a> Display<'a> {
         let window = video_subsystem
             .window(
                 &constants::EMULATOR_NAME,
-                constants::SCREEN_WIDTH as u32 * video_scale,
-                constants::SCREEN_HEIGHT as u32 * video_scale,
+                display_width * video_scale,
+                display_height * video_scale,
             )
             .position_centered()
             .build()
@@ -50,10 +66,10 @@ impl<'a> Display<'a> {
         let debug_panel = DebugPanel::new(
             // &video_subsystem,
             platform,
-            canvas.window().position().0 + (constants::SCREEN_WIDTH as u32 * video_scale) as i32,
+            canvas.window().position().0 + (display_width * video_scale) as i32,
             canvas.window().position().1,
             16,
-            constants::SCREEN_HEIGHT as u32,
+            display_height,
             6,
             color_palette,
             video_scale,
@@ -80,9 +96,32 @@ impl<'a> Display<'a> {
     }
 
     pub fn set_color_palette(&mut self, color_palette: usize) {
-        let colors = constants::PALETTE_COLORS[color_palette];
-        self.foreground_color = colors.0;
-        self.background_color = colors.1;
+        let (foreground_color, background_color) = constants::PALETTE_COLORS[color_palette];
+        self.foreground_color = foreground_color;
+        self.background_color = background_color;
+    }
+
+    pub fn get_hires_mode(&self) -> bool {
+        self.canvas.window().size().0 == constants::HIRES_SCREEN_WIDTH as u32
+            && self.canvas.window().size().1 == constants::HIRES_SCREEN_HEIGHT as u32
+    }
+
+    pub fn set_hires_mode(&mut self, hires_mode: bool) {
+        self.canvas
+            .window_mut()
+            .set_size(
+                if hires_mode {
+                    constants::HIRES_SCREEN_WIDTH as u32
+                } else {
+                    constants::LORES_SCREEN_WIDTH as u32
+                } * self.video_scale,
+                if hires_mode {
+                    constants::HIRES_SCREEN_HEIGHT as u32
+                } else {
+                    constants::LORES_SCREEN_HEIGHT as u32
+                } * self.video_scale,
+            )
+            .expect("Unable to resize window!");
     }
 
     pub fn update(&mut self, vram: &mut VideoMemory, crt_fade: bool, crt_fade_rate: u8) {

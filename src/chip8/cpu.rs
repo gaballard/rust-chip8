@@ -6,13 +6,18 @@ mod stack;
 use input_buffer::InputBuffer;
 use log::debug;
 use program_counter::ProgramCounter;
-use rand::{rngs::ThreadRng, Rng};
+use rand::{Rng, rngs::ThreadRng};
 use registers::Registers;
 use stack::Stack;
 
 use super::{Memory, VideoMemory};
 
-use crate::{chip8::sprite::SpriteKey, constants, fonts::CHIP8_FONTS};
+use crate::{
+    chip8::{ScrollDir, sprite::SpriteKey},
+    chippy::InstructionSet,
+    constants,
+    fonts::CHIP8_FONTS,
+};
 
 pub type Opcode = (u8, u8, u8, u8);
 
@@ -21,9 +26,8 @@ pub type Opcode = (u8, u8, u8, u8);
 ///
 #[must_use]
 pub struct Cpu {
+    pub instruction_set: InstructionSet,
     pub quit_flag: bool,
-    pub schip_mode: bool,
-    pub hires_mode: bool,
     pub cycle: usize,
     pub v: Registers,
     pub i: u16,
@@ -40,11 +44,10 @@ pub struct Cpu {
 }
 
 impl Cpu {
-    pub fn new(schip_mode: bool) -> Self {
+    pub fn new(instruction_set: InstructionSet) -> Self {
         let mut cpu = Self {
+            instruction_set,
             quit_flag: false,
-            schip_mode,
-            hires_mode: false,
             cycle: 0,
             v: Registers::new(),
             i: 0,
@@ -161,19 +164,21 @@ impl Cpu {
             (0x6, _, _, _) => self.ld_vx(x, kk),
             (0x7, _, _, _) => self.add_vx(x, kk),
             (0x8, _, _, 0x0) => self.ld_vx_vy(x, y),
-            (0x8, _, _, 0x1) => self.or_vx_vy(x, y),
-            (0x8, _, _, 0x2) => self.and_vx_vy(x, y),
-            (0x8, _, _, 0x3) => self.xor_vx_vy(x, y),
+            (0x8, _, _, 0x1) => self.or_vx_vy(x, y), // SCHIP variation
+            (0x8, _, _, 0x2) => self.and_vx_vy(x, y), // SCHIP variation
+            (0x8, _, _, 0x3) => self.xor_vx_vy(x, y), // SCHIP variation
             (0x8, _, _, 0x4) => self.add_vx_vy(x, y),
             (0x8, _, _, 0x5) => self.sub_vx_vy(x, y),
-            (0x8, _, _, 0x6) => self.shr_vx_vy(x, y), // SCHIP behavior
+            (0x8, _, _, 0x6) => self.shr_vx_vy(x, y), // SCHIP variation
             (0x8, _, _, 0x7) => self.subn_vx_vy(x, y),
-            (0x8, _, _, 0xE) => self.shl_vx_vy(x, y), // SCHIP behavior
+            (0x8, _, _, 0xE) => self.shl_vx_vy(x, y), // SCHIP variation
             (0x9, _, _, 0x0) => self.sne_vx_vy(x, y),
             (0xA, _, _, _) => self.ld_i(nnn),
-            (0xB, _, _, _) => self.jp_v0(nnn),
+            (0xB, _, _, _) if !self.instruction_set.is_schip() => self.jp_v0(nnn), // CHIP-8 only
+            (0xB, _, _, _) if self.instruction_set.is_schip() => self.jp_vx(x, nnn), // SCHIP only
             (0xC, _, _, _) => self.rnd_vx(x, kk),
-            (0xD, _, _, _) => self.drw_vx_vy(x, y, n), // SCHIP behavior
+            (0xD, _, _, 0x0) => self.drw_vx_vy_0(x, y), // SCHIP only
+            (0xD, _, _, _) => self.drw_vx_vy_n(x, y, n), // SCHIP variation
             (0xE, _, 0x9, 0xE) => self.skp_vx(x),
             (0xE, _, 0xA, 0x1) => self.sknp_vx(x),
             (0xF, _, 0x0, 0x7) => self.ld_vx_dt(x),
@@ -184,8 +189,8 @@ impl Cpu {
             (0xF, _, 0x2, 0x9) => self.ld_f_vx(x),
             (0xF, _, 0x3, 0x0) => self.ld_hf_vx(x), // SCHIP only
             (0xF, _, 0x3, 0x3) => self.ld_b_vx(x),
-            (0xF, _, 0x5, 0x5) => self.ld_i_vx(x), // SCHIP behavior
-            (0xF, _, 0x6, 0x5) => self.ld_vx_i(x),
+            (0xF, _, 0x5, 0x5) => self.ld_i_vx(x), // SCHIP variation
+            (0xF, _, 0x6, 0x5) => self.ld_vx_i(x), // SCHIP variation
             (0xF, _, 0x7, 0x5) => self.ld_r_vx(x), // SCHIP only
             (0xF, _, 0x8, 0x5) => self.ld_vx_r(x), // SCHIP only
             _ => self.no_op(opcode),
@@ -193,19 +198,20 @@ impl Cpu {
     }
 
     ///
-    /// 00Cn - SCD (SCHIP only)
+    /// 00Cn - SCD (SCHIP-1.1 only)
     ///
     /// Scroll display N lines down.
     ///
     pub fn scd(&mut self, n: u8) {
         debug!("00Cn - SCD {}", n);
-        if !self.schip_mode {
-            debug!("Can't scroll - not in SCHIP mode");
+        if self.instruction_set != InstructionSet::Schip1point1 {
+            debug!("Only available in SCHIP 1.1 mode");
             return;
-        } else if !self.hires_mode {
-            debug!("Can't scroll - not in hires mode");
+        } else if !self.vram.hires_mode {
+            debug!("Only available in hires mode");
             return;
         }
+        self.vram.scroll(ScrollDir::Down, n as usize);
     }
 
     ///
@@ -229,35 +235,37 @@ impl Cpu {
     }
 
     ///
-    /// 00FB - SCR (SCHIP only)
+    /// 00FB - SCR (SCHIP-1.1 only)
     ///
     /// Scroll display 4 pixels to the right.
     ///
     pub fn scr(&mut self) {
         debug!("00FB - SCR");
-        if !self.schip_mode {
-            debug!("Can't scroll - not in SCHIP mode");
+        if self.instruction_set != InstructionSet::Schip1point1 {
+            debug!("Only available in SCHIP 1.1 mode");
             return;
-        } else if !self.hires_mode {
-            debug!("Can't scroll - not in hires mode");
+        } else if !self.vram.hires_mode {
+            debug!("Only available in hires mode");
             return;
         }
+        self.vram.scroll(ScrollDir::Right, 4);
     }
 
     ///
-    /// 00FC - SCL (SCHIP only)
+    /// 00FC - SCL (SCHIP-1.1 only)
     ///
     /// Scroll display 4 pixels to the left.
     ///
     pub fn scl(&mut self) {
         debug!("00FC - SCL");
-        if !self.schip_mode {
-            debug!("Can't scroll - not in SCHIP mode");
+        if self.instruction_set != InstructionSet::Schip1point1 {
+            debug!("Only available in SCHIP 1.1 mode");
             return;
-        } else if !self.hires_mode {
-            debug!("Can't scroll - not in hires mode");
+        } else if !self.vram.hires_mode {
+            debug!("Only available in hires mode");
             return;
         }
+        self.vram.scroll(ScrollDir::Left, 4);
     }
 
     ///
@@ -267,8 +275,8 @@ impl Cpu {
     ///
     pub fn exit(&mut self) {
         debug!("00FD - EXIT");
-        if !self.schip_mode {
-            debug!("Not in SCHIP mode");
+        if !self.instruction_set.is_schip() {
+            debug!("Only available in SCHIP mode");
             return;
         }
         self.quit_flag = true;
@@ -279,10 +287,12 @@ impl Cpu {
     ///
     /// Disable hires screen mode.
     ///
+    /// The original SCHIP-1.x did not clear the screen, leading to artifacts.
+    ///
     pub fn low(&mut self) {
         debug!("00FE - LOW");
-        if !self.schip_mode {
-            debug!("Not in SCHIP mode");
+        if !self.instruction_set.is_schip() {
+            debug!("Only available in SCHIP mode");
             return;
         }
         self.vram.hires_mode = false;
@@ -293,10 +303,12 @@ impl Cpu {
     ///
     /// Enable hires screen mode.
     ///
+    /// The original SCHIP-1.x did not clear the screen, leading to artifacts.
+    ///
     pub fn high(&mut self) {
         debug!("00FF - HIGH");
-        if !self.schip_mode {
-            debug!("Not in SCHIP mode");
+        if !self.instruction_set.is_schip() {
+            debug!("Only available in SCHIP mode");
             return;
         }
         self.vram.hires_mode = true;
@@ -399,6 +411,10 @@ impl Cpu {
     pub fn or_vx_vy(&mut self, vx: u8, vy: u8) {
         debug!("8xy1 - OR V{}, V{}", vx, vy);
         self.v.write(vx, self.v.read(vx) | self.v.read(vy));
+        if self.instruction_set.is_cosmac() {
+            // COSMAC based variants will reset VF
+            self.v.write(0xF, 0);
+        }
     }
 
     ///
@@ -409,6 +425,10 @@ impl Cpu {
     pub fn and_vx_vy(&mut self, vx: u8, vy: u8) {
         debug!("8xy2 - AND V{}, V{}", vx, vy);
         self.v.write(vx, self.v.read(vx) & self.v.read(vy));
+        if self.instruction_set.is_cosmac() {
+            // COSMAC based variants will reset VF
+            self.v.write(0xF, 0);
+        }
     }
 
     ///
@@ -419,6 +439,10 @@ impl Cpu {
     pub fn xor_vx_vy(&mut self, vx: u8, vy: u8) {
         debug!("8xy3 - XOR V{}, V{}", vx, vy);
         self.v.write(vx, self.v.read(vx) ^ self.v.read(vy));
+        if self.instruction_set.is_cosmac() {
+            // COSMAC based variants will reset VF
+            self.v.write(0xF, 0);
+        }
     }
 
     ///
@@ -460,8 +484,14 @@ impl Cpu {
         } else {
             self.v.write(0xF, 0);
         }
-        self.v
-            .write(vx, self.v.read(if self.schip_mode { vx } else { vy }) >> 1);
+        self.v.write(
+            vx,
+            self.v.read(if self.instruction_set.is_schip() {
+                vx
+            } else {
+                vy
+            }) >> 1,
+        );
     }
 
     ///
@@ -496,8 +526,14 @@ impl Cpu {
         } else {
             self.v.write(0xF, 0)
         }
-        self.v
-            .write(vx, self.v.read(if self.schip_mode { vx } else { vy }) << 1);
+        self.v.write(
+            vx,
+            self.v.read(if self.instruction_set.is_schip() {
+                vx
+            } else {
+                vy
+            }) << 1,
+        );
     }
 
     ///
@@ -530,7 +566,25 @@ impl Cpu {
     ///
     pub fn jp_v0(&mut self, address: u16) {
         debug!("Bnnn - JP V0 address: {}", address);
+        if self.instruction_set.is_schip() {
+            debug!("Not available in SCHIP mode");
+            return;
+        }
         self.pc.jump(*self.v.read(0) as u16 + address);
+    }
+
+    ///
+    /// Bxnn - JP VX (SCHIP Only)
+    ///
+    /// The program counter is set to xnn plus the value of VX.
+    ///
+    pub fn jp_vx(&mut self, vx: u8, address: u16) {
+        debug!("Bxnn - JP VX address: {}", address);
+        if self.instruction_set.is_schip() {
+            debug!("Only available in SCHIP mode");
+            return;
+        }
+        self.pc.jump(*self.v.read(vx) as u16 + address);
     }
 
     ///
@@ -540,16 +594,16 @@ impl Cpu {
     ///
     pub fn rnd_vx(&mut self, vx: u8, value: u8) {
         debug!("Cxkk - RND V{}, byte: {}", vx, value);
-        let rnum: u8 = self.rng.gen();
+        let rnum: u8 = self.rng.r#gen();
         self.v.write(vx, rnum & value);
     }
 
     ///
-    /// Dxyn - DRW Vx, Vy (SCHIP Variation)
+    /// Dxyn - DRW Vx, Vy, N (SCHIP Variation)
     ///
-    /// Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+    /// Display 8xN pixel sprite starting at memory location I at (Vx, Vy), set VF = collision.
     ///
-    pub fn drw_vx_vy(&mut self, vx: u8, vy: u8, sprite_len: u8) {
+    pub fn drw_vx_vy_n(&mut self, vx: u8, vy: u8, sprite_len: u8) {
         debug!(
             "D{}{}{} - DRW V{}, V{}, {}",
             vx, vy, sprite_len, vx, vy, sprite_len
@@ -559,7 +613,8 @@ impl Cpu {
         let sprite_data = self.ram.read_slice(self.i, sprite_len as u16);
 
         if !self.vram.has_sprite(&sprite_key) {
-            self.vram.add_sprite(&sprite_key, sprite_data, sprite_len);
+            self.vram
+                .add_sprite(&sprite_key, 8, sprite_len, sprite_data);
         }
 
         let x = *self.v.read(vx) as usize % self.vram.get_screen_width();
@@ -573,7 +628,52 @@ impl Cpu {
         if collisions > 0 {
             self.v.write(
                 0xF,
-                if self.schip_mode {
+                if self.instruction_set.is_schip() {
+                    collisions
+                } else {
+                    self.v.read(0xF) | 1
+                },
+            );
+            self.vram.clear_collisions();
+        }
+    }
+
+    ///
+    /// Dxy0 - DRW Vx, Vy, 0 (SCHIP only)
+    ///
+    /// Display 16x16 pixel sprite starting at memory location I at (Vx, Vy), set VF = collision.
+    ///
+    pub fn drw_vx_vy_0(&mut self, vx: u8, vy: u8) {
+        debug!("D{}{}0 - DRW V{}, V{}, 0", vx, vy, vx, vy);
+
+        if !self.instruction_set.is_schip() {
+            debug!("Only available in SCHIP mode");
+            return;
+        }
+
+        let sprite_width: u8 = 16;
+        let sprite_height: u8 = 16;
+
+        let sprite_key: SpriteKey = SpriteKey(vx, vy, self.i, self.i + sprite_height as u16);
+        let sprite_data = self.ram.read_slice(self.i, sprite_height as u16);
+
+        if !self.vram.has_sprite(&sprite_key) {
+            self.vram
+                .add_sprite(&sprite_key, sprite_width, sprite_height, sprite_data);
+        }
+
+        let x = *self.v.read(vx) as usize % self.vram.get_screen_width();
+        let y = *self.v.read(vy) as usize % self.vram.get_screen_height();
+
+        self.vram.place_sprite(&sprite_key, x, y);
+        let collisions = self.vram.draw_sprite(&sprite_key);
+
+        self.v.write(0xF, 0);
+
+        if collisions > 0 {
+            self.v.write(
+                0xF,
+                if self.instruction_set.is_schip() {
                     collisions
                 } else {
                     self.v.read(0xF) | 1
@@ -678,8 +778,8 @@ impl Cpu {
     ///
     pub fn ld_hf_vx(&mut self, vx: u8) {
         debug!("Fx30 - LD HF, V{}", vx);
-        if !self.schip_mode {
-            debug!("Not in SCHIP mode");
+        if !self.instruction_set.is_schip() {
+            debug!("Only available in SCHIP mode");
             return;
         } else if vx > 0x9 {
             debug!("Value in V{} is not a decimal character!", vx);
@@ -704,7 +804,7 @@ impl Cpu {
     }
 
     ///
-    /// Fx55 - LD I Vx
+    /// Fx55 - LD I Vx (SCHIP Variation)
     ///
     /// CHIP-8:
     ///     The interpreter copies the values of registers V0 through Vx into memory, starting at the address in I. I is then incremented.
@@ -716,7 +816,7 @@ impl Cpu {
         for i in 0..(vx + 1) as u16 {
             self.ram.write(self.i + i, *self.v.read(i as u8));
         }
-        if !self.schip_mode {
+        if !self.instruction_set.is_schip() {
             // https://github.com/mattmikolay/chip-8/wiki/CHIP%E2%80%908-Instruction-Set
             // I is set to I + X + 1 after operation
             self.i = self.i + vx as u16 + 1;
@@ -724,7 +824,7 @@ impl Cpu {
     }
 
     ///
-    /// Fx65 - LD Vx, I
+    /// Fx65 - LD Vx, I (SCHIP Variation)
     ///
     /// CHIP-8
     ///     The interpreter reads values from memory starting at location I into registers V0 through Vx. I is then incremented.
@@ -736,7 +836,7 @@ impl Cpu {
         for i in 0..(vx + 1) as u16 {
             self.v.write(i as u8, *self.ram.read(self.i + i));
         }
-        if !self.schip_mode {
+        if !self.instruction_set.is_schip() {
             // https://github.com/mattmikolay/chip-8/wiki/CHIP%E2%80%908-Instruction-Set
             // I is set to I + X + 1 after operation
             self.i = self.i + vx as u16 + 1;
@@ -750,10 +850,11 @@ impl Cpu {
     ///
     pub fn ld_r_vx(&mut self, vx: u8) {
         debug!("Fx75 - LD R, V{}", vx);
-        if !self.schip_mode {
-            debug!("Not in SCHIP mode");
+        if !self.instruction_set.is_schip() {
+            debug!("Only available in SCHIP mode");
             return;
         }
+        debug!("Not implemented");
     }
 
     ///
@@ -763,10 +864,11 @@ impl Cpu {
     ///
     pub fn ld_vx_r(&mut self, vx: u8) {
         debug!("Fx75 - LD V{}, R", vx);
-        if !self.schip_mode {
-            debug!("Not in SCHIP mode");
+        if !self.instruction_set.is_schip() {
+            debug!("Only available in SCHIP mode");
             return;
         }
+        debug!("Not implemented");
     }
 
     ///
