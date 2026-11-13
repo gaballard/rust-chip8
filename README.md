@@ -61,11 +61,12 @@ Set the `RUST_LOG` env var to `debug` to see log messages in the console.
 Chippy fully supports the following CHIP-8 instruction sets:
 
 - [CHIP-8](https://github.com/mattmikolay/chip-8/wiki/CHIP%E2%80%908-Instruction-Set) (1977)
-- [SCHIP-1.x](http://devernay.free.fr/hacks/chip8/schip.txt) (1991)
+- [SCHIP-1.0](http://devernay.free.fr/hacks/chip8/schip.txt) (1991)
+- [SCHIP-1.1](http://devernay.free.fr/hacks/chip8/schip.txt) (1991)
 
 As well as partial support for CHIP-48, SCHIPC, and others (more to come!)
 
-Use the `DEFAULT_INSTRUCTION_SET` const to select a variant before loading the program.
+Use the `instruction_set` parameter in `settings.ini` to select a variant before loading the program.
 
 ### Quirks
 
@@ -82,7 +83,7 @@ Use the `DEFAULT_INSTRUCTION_SET` const to select a variant before loading the p
 |        | 9   | CHIP-10                                     | `Dxyn`                         | CHIP-10 only has a hires mode                                                                                                                                                                    |
 |        | 10  | CHIP-1.1                                    | `Dxyn`, `Dxy0`                 | The original SCHIP-1.1 in hires mode set VF to the number of sprite rows with collisions plus the number of rows clipped at the bottom border                                                    |
 |        | 11  | SCHIP-1.x, SCHIPC                           | `Dxy0`                         | SCHIP-1.x/SCHIPC only draws 8x16 on lores                                                                                                                                                        |
-|   ✅    | 12  | CHIP-48, SCHIP-1.0, SCHIP-1.1, SCHIP-MODERN | `Fx55`, `Fx65`                 | CHIP-48/SCHIP1.0 increment I only by X, SCHIP1.1/SCHIP-MODERN not at all                                                                                                                         |
+| ✅     | 12  | CHIP-48, SCHIP-1.0, SCHIP-1.1, SCHIP-MODERN | `Fx55`, `Fx65`                 | CHIP-48/SCHIP1.0 increment I only by X, SCHIP1.1/SCHIP-MODERN not at all                                                                                                                         |
 |        | 13  | SCHIP-1.x, SCHIPC                           | `Fx75`, `Fx85`                 | SCHIP-1.x and SCHIPC only support v0-v7 on a real HP48                                                                                                                                           |
 
 ## ROM Compatibility
@@ -124,20 +125,6 @@ The following is a list of games that have been tested with this interpreter:
 | Keypad (`6-keypad.ch8`)          | ✅     | ✅        |                                        |
 | Beep (`7-beep.ch8`)              | ✅     | ✅        |                                        |
 | Scrolling (`8-scrolling.ch8`)    |        | ❌        | SCHIP mode only                        |
-
-## Roadmap
-
-- ~~CRT fade effect~~
-- ~~Improve debugging~~
-- ~~Adjustable video scaling~~
-- Add SCHIP support (In Progress)
-- Move config to `settings.ini`
-- Settings and flags visible in UI
-- Adjustable clock speed
-- ROM hotswapping
-- Add compiler/decompiler
-- Alert text overlay with fadeout
-- Simulated timings
 
 ## License
 
