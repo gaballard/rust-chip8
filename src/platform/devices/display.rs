@@ -26,11 +26,11 @@ pub struct Display<'a> {
 impl<'a> Display<'a> {
     pub fn new(
         platform: &'a Platform,
+        video_scale: u32,
         hires_mode: bool,
         font: &'a Font<'a, 'static>,
         color_palette: usize,
     ) -> Self {
-        let video_scale = constants::VIDEO_SCALE;
         let display_width = if hires_mode {
             constants::HIRES_SCREEN_WIDTH as u32
         } else {

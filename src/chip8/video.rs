@@ -10,7 +10,9 @@ use crate::{
     utils::read_bit_from_byte,
 };
 
+#[derive(Debug)]
 pub enum ScrollDir {
+    Up,
     Down,
     Left,
     Right,
@@ -24,7 +26,6 @@ pub enum ScrollDir {
 pub struct VideoMemory {
     pub hires_mode: bool,
     pub vram_changed: bool,
-    // lores_data: [[u8; constants::LORES_SCREEN_WIDTH]; constants::LORES_SCREEN_HEIGHT],
     data: [[u8; constants::HIRES_SCREEN_WIDTH]; constants::HIRES_SCREEN_HEIGHT],
     sprites: HashMap<SpriteKey, Sprite>,
     collisions: u8,
@@ -35,7 +36,6 @@ impl VideoMemory {
         Self {
             hires_mode: false,
             vram_changed: false,
-            // lores_data: [[0; constants::LORES_SCREEN_WIDTH]; constants::LORES_SCREEN_HEIGHT],
             data: [[0; constants::HIRES_SCREEN_WIDTH]; constants::HIRES_SCREEN_HEIGHT],
             sprites: HashMap::new(),
             collisions: 0,
@@ -111,31 +111,13 @@ impl VideoMemory {
     pub fn scroll(&mut self, dir: ScrollDir, amount: usize) {
         let mut new_data = self.data.clone();
 
-        let get_offset = |y: usize, x: usize| -> usize {
-            match dir {
-                // TODO: what is the actual behavior here? saturate, wrap, panic?
-                ScrollDir::Down => y.saturating_add(amount),
-                ScrollDir::Left => x.saturating_sub(amount),
-                ScrollDir::Right => x.saturating_add(amount),
-            }
-        };
-
-        let check_offset = |offset: usize| -> bool {
-            match dir {
-                ScrollDir::Down => offset < self.get_screen_height(),
-                ScrollDir::Left => true,
-                ScrollDir::Right => offset < self.get_screen_width(),
-            }
-        };
-
         for y in 0..self.get_screen_height() {
             for x in 0..self.get_screen_width() {
-                let offset = get_offset(y, x);
-
-                new_data[y][x] = if check_offset(offset) {
-                    0
-                } else {
-                    self.data[y + amount][x]
+                new_data[y][x] = match dir {
+                    ScrollDir::Down => self.data[y.saturating_sub(amount)][x],
+                    ScrollDir::Up => self.data[y.saturating_add(amount)][x],
+                    ScrollDir::Right => self.data[y][x.saturating_sub(amount)],
+                    ScrollDir::Left => self.data[y][x.saturating_add(amount)],
                 };
             }
         }
@@ -174,7 +156,7 @@ impl VideoMemory {
         }
     }
 
-    pub fn draw_sprite(&mut self, key: &SpriteKey) -> u8 {
+    pub fn draw_sprite(&mut self, key: &SpriteKey, _clipping: bool) -> u8 {
         let mut collisions: u8 = 0;
 
         let sprite = match self.get_sprite(key) {
@@ -185,12 +167,29 @@ impl VideoMemory {
             }
         };
 
-        for sy in 0..sprite.get_height() {
-            let vy = (sprite.get_y() + sy as usize) % self.get_screen_height();
-            for sx in 0..sprite.get_width() {
-                let vx = (sprite.get_x() + sx as usize) % self.get_screen_width();
+        // TODO: what's the role of clipping again between CHIP-8 and SCHIP?
 
-                let pixel = read_bit_from_byte(sprite.get_data()[sy as usize], 7 - sx as u8);
+        let pos_y = if sprite.get_y() > self.get_screen_height() {
+            sprite.get_y() % self.get_screen_height()
+        } else {
+            sprite.get_y()
+        };
+
+        let pos_x = if sprite.get_x() > self.get_screen_width() {
+            sprite.get_x() % self.get_screen_width()
+        } else {
+            sprite.get_x()
+        };
+
+        for sy in 0..sprite.get_height() {
+            let vy = pos_y.saturating_add(sy as usize);
+            for sx in 0..sprite.get_width() {
+                let vx = pos_x.saturating_add(sx as usize);
+
+                let pixel = read_bit_from_byte(
+                    sprite.get_data()[sy as usize],
+                    (7 as u8).wrapping_sub(sx as u8),
+                );
 
                 if pixel == 0 {
                     continue;

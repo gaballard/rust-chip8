@@ -1,12 +1,10 @@
 mod waveforms;
 
 use sdl2::{
-    audio::{AudioDevice, AudioSpecDesired},
     Sdl,
+    audio::{AudioDevice, AudioSpecDesired},
 };
 use waveforms::SquareWave;
-
-use crate::constants;
 
 ///
 /// Audio
@@ -18,11 +16,11 @@ pub struct Audio {
 }
 
 impl Audio {
-    pub fn new(sdl_context: &Sdl) -> Self {
+    pub fn new(sdl_context: &Sdl, beep_freq_hz: u32) -> Self {
         let audio_subsystem = sdl_context.audio().unwrap();
 
         let audio_spec = AudioSpecDesired {
-            freq: Some(constants::BEEP_FREQ_HZ),
+            freq: Some(beep_freq_hz as i32),
             channels: Some(1),
             samples: None,
         };

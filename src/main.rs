@@ -24,7 +24,7 @@ fn main() {
         panic!("Must include path to ROM file!");
     }
 
-    println!("There's my Chippy.");
+    let settings = Settings::from(".").expect("Unable to open settings file");
 
     // Set up SDL context
     let platform = Platform::new();
@@ -32,24 +32,25 @@ fn main() {
     // Load resources
     let font = platform
         .get_ttf_context()
-        .load_font(constants::FONT_PATH, constants::FONT_SIZE)
+        .load_font(settings.font_path.as_str(), settings.font_size)
         .expect("Font does not exist");
 
-    let instruction_set = constants::DEFAULT_INSTRUCTION_SET;
-    let mut chippy = Chippy::new(&platform, instruction_set, &font);
+    let mut chippy = Chippy::new(&platform, settings, &font);
+
+    println!("There's my Chippy.");
 
     // Interpreter timing
     let mut prev_frame_tick: u32;
     let mut should_execute: bool;
 
     // Load program
-    chippy.settings.rom_filename = args[1].to_owned();
-    chippy.devices.tape.read(&chippy.settings.rom_filename);
+    chippy.state.rom_filename = args[1].to_owned();
+    chippy.devices.tape.read(&chippy.state.rom_filename);
     chippy.devices.cpu.load_program(&chippy.devices.tape.data);
 
     println!(
         "Running program using the {} instruction set.",
-        instruction_set.get_title()
+        chippy.settings.instruction_set.get_title()
     );
 
     // Main loop
@@ -63,7 +64,7 @@ fn main() {
         chippy.devices.cpu.vram.vram_changed = false;
 
         // Check inputs
-        match chippy.devices.keypad.read_host_keypad() {
+        match chippy.devices.keypad.read_host_keypad(&chippy.settings) {
             Actions::Running => {}
             Actions::Quit => break 'emulate,
             Actions::Reset => Actions::handle_reset_action(&mut chippy),
@@ -78,6 +79,7 @@ fn main() {
             }
             Actions::IncVideoScale => Actions::handle_inc_video_scale(&mut chippy),
             Actions::DecVideoScale => Actions::handle_dec_video_scale(&mut chippy),
+            Actions::ScrollScreen(dir, amount) => Actions::handle_scroll(&mut chippy, dir, amount),
         }
 
         // Refill input buffer
@@ -87,7 +89,7 @@ fn main() {
             .read_keypad(chippy.devices.cpu.keys.get_buffer());
 
         // Handle debug mode
-        if chippy.settings.debug_mode {
+        if chippy.state.debug_mode {
             if !should_execute {
                 draw_screen(&mut chippy);
                 continue;
@@ -102,12 +104,14 @@ fn main() {
             break 'emulate;
         }
 
+        // Play audio
         if chippy.devices.cpu.sound_timer > 0 {
             chippy.devices.audio.start_beep();
         } else {
             chippy.devices.audio.stop_beep()
         }
 
+        // Switch video modes if needed
         if chippy.devices.cpu.vram.hires_mode != chippy.devices.display.get_hires_mode() {
             chippy
                 .devices
@@ -119,9 +123,9 @@ fn main() {
         draw_screen(&mut chippy);
 
         let dt = chippy.resources.frame_timer.ticks() - prev_frame_tick;
-        if dt < chippy.settings.target_timestep {
+        if dt < chippy.state.get_target_timestep() {
             std::thread::sleep(Duration::from_millis(
-                (chippy.settings.target_timestep - dt).into(),
+                (chippy.state.get_target_timestep() - dt).into(),
             ));
         }
     }
@@ -137,7 +141,7 @@ fn draw_screen(chippy: &mut Chippy) {
         .update(&chippy.devices.cpu);
     chippy.devices.display.update(
         &mut chippy.devices.cpu.vram,
-        chippy.settings.crt_fade,
-        chippy.settings.crt_fade_rate as u8,
+        chippy.state.crt_fade,
+        chippy.state.crt_fade_rate as u8,
     );
 }

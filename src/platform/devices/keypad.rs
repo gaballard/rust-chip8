@@ -1,12 +1,13 @@
 extern crate sdl2;
 
-use sdl2::event::Event;
-use sdl2::keyboard::{KeyboardState, Keycode, Scancode};
 use sdl2::EventPump;
 use sdl2::Sdl;
+use sdl2::event::Event;
+use sdl2::keyboard::{KeyboardState, Keycode, Scancode};
 
-use crate::chippy::PixelFadeRate;
 use crate::Actions;
+use crate::chip8::ScrollDir;
+use crate::chippy::Settings;
 
 ///
 /// Keypad
@@ -48,7 +49,7 @@ impl Keypad {
         keys[0xF] = keypad_state.is_scancode_pressed(Scancode::V);
     }
 
-    pub fn read_host_keypad(&mut self) -> Actions {
+    pub fn read_host_keypad(&mut self, settings: &Settings) -> Actions {
         for event in self.event_pump.poll_iter() {
             match event {
                 // Quit
@@ -86,12 +87,6 @@ impl Keypad {
                     ..
                 } => return Actions::Step,
 
-                // Set hires mode
-                Event::KeyDown {
-                    keycode: Some(Keycode::H),
-                    ..
-                } => return Actions::ToggleHiresMode,
-
                 // Video scaling
                 Event::KeyDown {
                     keycode: Some(Keycode::LeftBracket),
@@ -103,6 +98,33 @@ impl Keypad {
                     ..
                 } => return Actions::IncVideoScale,
 
+                // Set hires mode
+                Event::KeyDown {
+                    keycode: Some(Keycode::H),
+                    ..
+                } => return Actions::ToggleHiresMode,
+
+                // Scroll display
+                Event::KeyDown {
+                    keycode: Some(Keycode::Down),
+                    ..
+                } => return Actions::ScrollScreen(ScrollDir::Down, 1),
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::Up),
+                    ..
+                } => return Actions::ScrollScreen(ScrollDir::Up, 1),
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::Right),
+                    ..
+                } => return Actions::ScrollScreen(ScrollDir::Right, 1),
+
+                Event::KeyDown {
+                    keycode: Some(Keycode::Left),
+                    ..
+                } => return Actions::ScrollScreen(ScrollDir::Left, 1),
+
                 // Toggle CRT fade effect
                 Event::KeyDown {
                     keycode: Some(Keycode::J),
@@ -112,17 +134,19 @@ impl Keypad {
                 Event::KeyDown {
                     keycode: Some(Keycode::Num7),
                     ..
-                } => return Actions::SetCrtFadeSpeed(PixelFadeRate::Slow),
+                } => {
+                    return Actions::SetCrtFadeSpeed(settings.crt_fade_rate_slow);
+                }
 
                 Event::KeyDown {
                     keycode: Some(Keycode::Num8),
                     ..
-                } => return Actions::SetCrtFadeSpeed(PixelFadeRate::Medium),
+                } => return Actions::SetCrtFadeSpeed(settings.crt_fade_rate_medium),
 
                 Event::KeyDown {
                     keycode: Some(Keycode::Num9),
                     ..
-                } => return Actions::SetCrtFadeSpeed(PixelFadeRate::Fast),
+                } => return Actions::SetCrtFadeSpeed(settings.crt_fade_rate_fast),
 
                 // Switch color palette
                 Event::KeyDown {
