@@ -24,7 +24,7 @@ fn main() {
         panic!("Must include path to ROM file!");
     }
 
-    println!("There's my Chippy.");
+    let settings = Settings::from(".").expect("Unable to open settings file");
 
     // Set up SDL context
     let platform = Platform::new();
@@ -32,36 +32,39 @@ fn main() {
     // Load resources
     let font = platform
         .get_ttf_context()
-        .load_font(constants::FONT_PATH, constants::FONT_SIZE)
+        .load_font(settings.font_path.as_str(), settings.font_size)
         .expect("Font does not exist");
 
-    let mut chippy = Chippy::new(&platform, &font);
+    let mut chippy = Chippy::new(&platform, settings, &font);
+
+    println!("There's my Chippy.");
 
     // Interpreter timing
-    let emulator_timestep = 1_000 / constants::TARGET_CLOCK_SPEED;
-
     let mut prev_frame_tick: u32;
     let mut should_execute: bool;
 
     // Load program
-    chippy.settings.rom_filename = args[1].to_owned();
-    chippy.devices.tape.read(&chippy.settings.rom_filename);
+    chippy.state.rom_filename = args[1].to_owned();
+    chippy.devices.tape.read(&chippy.state.rom_filename);
     chippy.devices.cpu.load_program(&chippy.devices.tape.data);
 
-    println!("Running program...");
+    println!(
+        "Running program using the {} instruction set.",
+        chippy.settings.instruction_set.get_title()
+    );
 
     // Main loop
     'emulate: loop {
         prev_frame_tick = chippy.resources.frame_timer.ticks();
         should_execute = false;
 
-        // Clear screen
+        // Clear frame buffer
         chippy.devices.display.reset();
         chippy.devices.display.debug_panel.reset();
         chippy.devices.cpu.vram.vram_changed = false;
 
         // Check inputs
-        match chippy.devices.keypad.read_host_keypad() {
+        match chippy.devices.keypad.read_host_keypad(&chippy.settings) {
             Actions::Running => {}
             Actions::Quit => break 'emulate,
             Actions::Reset => Actions::handle_reset_action(&mut chippy),
@@ -70,9 +73,13 @@ fn main() {
             Actions::ToggleDebugPanel => Actions::handle_toggle_debug_panel_action(&mut chippy),
             Actions::CycleColorPalette => Actions::handle_cycle_color_palette_action(&mut chippy),
             Actions::ToggleCrtFade => Actions::handle_toggle_crt_fade_action(&mut chippy),
+            Actions::ToggleHiresMode => Actions::handle_toggle_hires_mode(&mut chippy),
             Actions::SetCrtFadeSpeed(fade_rate) => {
                 Actions::handle_set_crt_fade_rate_action(&mut chippy, fade_rate)
             }
+            Actions::IncVideoScale => Actions::handle_inc_video_scale(&mut chippy),
+            Actions::DecVideoScale => Actions::handle_dec_video_scale(&mut chippy),
+            Actions::ScrollScreen(dir, amount) => Actions::handle_scroll(&mut chippy, dir, amount),
         }
 
         // Refill input buffer
@@ -82,18 +89,9 @@ fn main() {
             .read_keypad(chippy.devices.cpu.keys.get_buffer());
 
         // Handle debug mode
-        if chippy.settings.debug_mode {
+        if chippy.state.debug_mode {
             if !should_execute {
-                chippy
-                    .devices
-                    .display
-                    .debug_panel
-                    .update(&chippy.devices.cpu);
-                chippy.devices.display.update(
-                    &mut chippy.devices.cpu.vram,
-                    chippy.settings.crt_fade,
-                    chippy.settings.crt_fade_rate,
-                );
+                draw_screen(&mut chippy);
                 continue;
             }
             debug!("Executing frame {}...", chippy.devices.cpu.cycle);
@@ -102,33 +100,48 @@ fn main() {
         // Execute cycle
         chippy.devices.cpu.tick();
 
-        if chippy.settings.schip_mode && chippy.devices.cpu.quit_flag {
+        if chippy.settings.instruction_set.is_schip() && chippy.devices.cpu.quit_flag {
             break 'emulate;
         }
 
+        // Play audio
         if chippy.devices.cpu.sound_timer > 0 {
             chippy.devices.audio.start_beep();
         } else {
             chippy.devices.audio.stop_beep()
         }
 
+        // Switch video modes if needed
+        if chippy.devices.cpu.vram.hires_mode != chippy.devices.display.get_hires_mode() {
+            chippy
+                .devices
+                .display
+                .set_hires_mode(chippy.devices.cpu.vram.hires_mode);
+        }
+
         // Draw screen
-        chippy
-            .devices
-            .display
-            .debug_panel
-            .update(&chippy.devices.cpu);
-        chippy.devices.display.update(
-            &mut chippy.devices.cpu.vram,
-            chippy.settings.crt_fade,
-            chippy.settings.crt_fade_rate,
-        );
+        draw_screen(&mut chippy);
 
         let dt = chippy.resources.frame_timer.ticks() - prev_frame_tick;
-        if dt < emulator_timestep {
-            std::thread::sleep(Duration::from_millis((emulator_timestep - dt).into()));
+        if dt < chippy.state.get_target_timestep() {
+            std::thread::sleep(Duration::from_millis(
+                (chippy.state.get_target_timestep() - dt).into(),
+            ));
         }
     }
 
     println!("Thanks for playing!");
+}
+
+fn draw_screen(chippy: &mut Chippy) {
+    chippy
+        .devices
+        .display
+        .debug_panel
+        .update(&chippy.devices.cpu);
+    chippy.devices.display.update(
+        &mut chippy.devices.cpu.vram,
+        chippy.state.crt_fade,
+        chippy.state.crt_fade_rate as u8,
+    );
 }

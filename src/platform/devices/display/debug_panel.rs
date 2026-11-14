@@ -35,11 +35,6 @@ impl<'a> DebugPanel<'a> {
         let scaled_width = width * video_scale;
         let scaled_height = height * video_scale;
 
-        // let font = platform
-        //     .get_ttf_context()
-        //     .load_font(constants::FONT_PATH, constants::FONT_SIZE)
-        //     .expect("Font does not exist");
-
         let video_subsystem = platform
             .get_sdl_context()
             .video()
@@ -126,15 +121,23 @@ impl<'a> DebugPanel<'a> {
         let col = 0;
         let mut row = 0;
 
+        // Cycle #
+        self.draw_text(
+            &format!("Cycle: {}", cpu.cycle),
+            (anchor_x as u32 + self.padding * 2 + (width / 2) * col) as usize,
+            ((anchor_y + self.padding as i32 + self.font.height() * row) as f32 * 1.5) as usize,
+        );
+        row = row.wrapping_add(1);
+
         // PC
         self.draw_text(
             &format!("PC: 0x{:X}", cpu.get_pc().address),
             (anchor_x as u32 + self.padding * 2 + (width / 2) * col) as usize,
             ((anchor_y + self.padding as i32 + self.font.height() * row) as f32 * 1.5) as usize,
         );
+        row = row.wrapping_add(1);
 
         // I register
-        row += 1;
         self.draw_text(
             &format!("I:  0x{:X}", cpu.i),
             (anchor_x as u32 + self.padding * 2 + (width / 2) * col) as usize,
@@ -143,7 +146,7 @@ impl<'a> DebugPanel<'a> {
 
         // V registers
         for r in 0..16 {
-            row += 1;
+            row = row.wrapping_add(1);
             self.draw_text(
                 &format!("V{:X}: {}", r, cpu.v.read(r)).to_string(),
                 (anchor_x as u32 + self.padding * 2 + (width / 2) * col) as usize,
